@@ -12,11 +12,19 @@
       </p>
     </div>
     <div class="action-bar">
-      <a class="button" href="{% url 'operator-post-compose' %}?client={{ client_record.pk }}">Create post</a>
-      <a class="button-secondary" href="{% url 'operator-campaign-create' %}">New campaign</a>
+      <a class="button" href="{% url 'operator-client-post-compose' slug=client_record.slug %}">Create post</a>
+      <a class="button-secondary" href="{% url 'operator-client-post-calendar' slug=client_record.slug %}">Calendar</a>
+      <a class="button-secondary" href="{% url 'operator-client-campaign-create' slug=client_record.slug %}">New campaign</a>
       <a class="button-secondary" href="{% url 'operator-client-edit' slug=client_record.slug %}">Edit client</a>
     </div>
   </section>
+
+  <nav class="workspace-tabs">
+    <a href="{% url 'operator-client-detail' slug=client_record.slug %}">Overview</a>
+    <a href="{% url 'operator-client-post-list' slug=client_record.slug %}">Posts</a>
+    <a href="{% url 'operator-client-post-calendar' slug=client_record.slug %}">Calendar</a>
+    <a href="{% url 'operator-client-social-account-list' slug=client_record.slug %}">Connections</a>
+  </nav>
 
   <section class="metric-grid">
     <article class="metric-card"><span>Posts</span><strong>{{ stats.posts }}</strong></article>
@@ -33,12 +41,12 @@
             <h2>Recent posts</h2>
             <p class="muted">Standalone posts and campaign posts live together here.</p>
           </div>
-          <a class="button-secondary" href="{% url 'operator-post-list' %}?client={{ client_record.pk }}">View all</a>
+          <a class="button-secondary" href="{% url 'operator-client-post-list' slug=client_record.slug %}">View all</a>
         </div>
         {% if recent_posts %}
           <div class="feed-list">
             {% for post in recent_posts %}
-              <a class="feed-item" href="{% url 'operator-post-detail' pk=post.pk %}">
+              <a class="feed-item" href="{% url 'operator-client-post-detail' slug=client_record.slug pk=post.pk %}">
                 <span class="status-dot status-{{ post.status|lower }}"></span>
                 <div>
                   <strong>{{ post.title }}</strong>
@@ -70,8 +78,8 @@
                 <h3>{{ campaign.name }}</h3>
                 <p class="muted">{{ campaign.post_count }} post{{ campaign.post_count|pluralize }}</p>
                 <div class="action-bar">
-                  <a href="{% url 'operator-campaign-detail' pk=campaign.pk %}">Open</a>
-                  <a href="{% url 'operator-post-compose' %}?campaign={{ campaign.pk }}">Add post</a>
+                  <a href="{% url 'operator-client-campaign-detail' slug=client_record.slug pk=campaign.pk %}">Open</a>
+                  <a href="{% url 'operator-client-post-compose' slug=client_record.slug %}?campaign={{ campaign.pk }}">Add post</a>
                 </div>
               </article>
             {% endfor %}
@@ -89,7 +97,7 @@
             <h2>Platforms</h2>
             <p class="muted">Connected accounts for this client.</p>
           </div>
-          <a class="button-secondary" href="{% url 'operator-social-account-list' %}">Manage</a>
+          <a class="button-secondary" href="{% url 'operator-client-social-account-list' slug=client_record.slug %}">Manage</a>
         </div>
         {% if social_accounts %}
           <div class="platform-stack">

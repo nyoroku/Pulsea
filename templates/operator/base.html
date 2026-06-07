@@ -16,10 +16,6 @@
       <nav class="main-nav">
         <a href="{% url 'operator-dashboard' %}">Overview</a>
         <a href="{% url 'operator-client-list' %}">Workspaces</a>
-        <a href="{% url 'operator-campaign-list' %}">Campaigns</a>
-        <a href="{% url 'operator-post-list' %}">Posts</a>
-        <a href="{% url 'operator-post-calendar' %}">Calendar</a>
-        <a href="{% url 'operator-social-account-list' %}">Connections</a>
       </nav>
       <div class="user-menu">
         <span>{{ request.user.username }}</span>

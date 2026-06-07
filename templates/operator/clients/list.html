@@ -43,7 +43,7 @@
           </div>
           <div class="action-bar">
             <a class="button" href="{% url 'operator-client-detail' slug=client_record.slug %}">Open workspace</a>
-            <a class="button-secondary" href="{% url 'operator-post-compose' %}?client={{ client_record.pk }}">New post</a>
+            <a class="button-secondary" href="{% url 'operator-client-post-compose' slug=client_record.slug %}">New post</a>
           </div>
         </article>
       {% endfor %}

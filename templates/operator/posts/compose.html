@@ -6,9 +6,9 @@
   <section class="workspace-hero compose-hero">
     <div>
       <p class="eyebrow">Composer</p>
-      <h1>Build a post</h1>
+      <h1>{% if client_record %}Build for {{ client_record.name }}{% else %}Build a post{% endif %}</h1>
       <p class="muted">
-        Create standalone content or attach it to a campaign. Choose platforms only after the client is right.
+        {% if client_record %}Create standalone content or attach it to one of this client's campaigns.{% else %}Create standalone content or attach it to a campaign. Choose platforms only after the client is right.{% endif %}
       </p>
     </div>
     {% if prefill_client or prefill_campaign %}
@@ -26,8 +26,12 @@
     <section class="panel glass-panel compose-panel">
       <p class="eyebrow">Step 01</p>
       <h2>Workspace and campaign</h2>
-      <p class="muted">Campaign is optional. Use it only when this post belongs to a launch, offer, or content theme.</p>
-      {{ form.client.as_field_group }}
+      <p class="muted">{% if client_record %}You are working inside {{ client_record.name }}. Campaign is optional.{% else %}Campaign is optional. Use it only when this post belongs to a launch, offer, or content theme.{% endif %}</p>
+      {% if client_record %}
+        {{ form.client.as_hidden }}
+      {% else %}
+        {{ form.client.as_field_group }}
+      {% endif %}
       {{ form.campaign.as_field_group }}
     </section>
 

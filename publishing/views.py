@@ -33,16 +33,30 @@ from .tasks import dispatch_post, manual_retry_failed_targets
 
 @staff_member_required(login_url="operator-login")
 def post_list(request):
+    context = _post_list_context(request)
+    return render(request, "operator/posts/list.html", context)
+
+
+@staff_member_required(login_url="operator-login")
+def client_post_list(request, slug):
+    client_record = _active_client(slug)
+    context = _post_list_context(request, client_record=client_record)
+    return render(request, "operator/posts/list.html", context)
+
+
+def _post_list_context(request, client_record=None):
     posts = Post.objects.select_related("client", "campaign").prefetch_related(
         "targets",
         "targets__social_account",
     )
     selected_status = request.GET.get("status", "")
-    selected_client = request.GET.get("client", "")
+    selected_client = str(client_record.pk) if client_record else request.GET.get("client", "")
     query = request.GET.get("q", "").strip()
     if selected_status:
         posts = posts.filter(status=selected_status)
-    if selected_client:
+    if client_record:
+        posts = posts.filter(client=client_record)
+    elif selected_client:
         posts = posts.filter(client_id=selected_client)
     if query:
         posts = posts.filter(
@@ -58,14 +72,30 @@ def post_list(request):
         "selected_client": selected_client,
         "selected_status": selected_status,
         "query": query,
+        "client_record": client_record,
     }
-    return render(request, "operator/posts/list.html", context)
+    return context
 
 
 @staff_member_required(login_url="operator-login")
 def post_compose(request):
-    initial = _compose_initial(request)
-    form = PostComposerForm(request.POST or None, request.FILES or None, initial=initial)
+    return _post_compose(request)
+
+
+@staff_member_required(login_url="operator-login")
+def client_post_compose(request, slug):
+    client_record = _active_client(slug)
+    return _post_compose(request, client_record=client_record)
+
+
+def _post_compose(request, client_record=None):
+    initial = _compose_initial(request, client_record=client_record)
+    form = PostComposerForm(
+        request.POST or None,
+        request.FILES or None,
+        initial=initial,
+        client_context=client_record,
+    )
     if request.method == "POST" and form.is_valid():
         action = request.POST.get("action", "draft")
         if action == "schedule" and not form.cleaned_data["scheduled_at"]:
@@ -123,6 +153,12 @@ def post_compose(request):
                 for uploaded_media in uploaded_media_items:
                     storage.delete(uploaded_media.file_key)
                 raise
+            if client_record:
+                return redirect(
+                    "operator-client-post-detail",
+                    slug=client_record.slug,
+                    pk=post.pk,
+                )
             return redirect("operator-post-detail", pk=post.pk)
     return render(
         request,
@@ -131,14 +167,27 @@ def post_compose(request):
             "form": form,
             "prefill_client": initial.get("client"),
             "prefill_campaign": initial.get("campaign"),
+            "client_record": client_record,
         },
     )
 
 
 @staff_member_required(login_url="operator-login")
 def post_calendar(request):
+    context = _post_calendar_context(request)
+    return render(request, "operator/posts/calendar.html", context)
+
+
+@staff_member_required(login_url="operator-login")
+def client_post_calendar(request, slug):
+    client_record = _active_client(slug)
+    context = _post_calendar_context(request, client_record=client_record)
+    return render(request, "operator/posts/calendar.html", context)
+
+
+def _post_calendar_context(request, client_record=None):
     today = timezone.localdate()
-    selected_client = request.GET.get("client", "")
+    selected_client = str(client_record.pk) if client_record else request.GET.get("client", "")
     try:
         year = int(request.GET.get("year", today.year))
         month = int(request.GET.get("month", today.month))
@@ -158,7 +207,9 @@ def post_calendar(request):
         | Q(published_at__date__gte=month_start, published_at__date__lt=month_end)
         | Q(created_at__date__gte=month_start, created_at__date__lt=month_end)
     )
-    if selected_client:
+    if client_record:
+        posts = posts.filter(client=client_record)
+    elif selected_client:
         posts = posts.filter(client_id=selected_client)
 
     posts_by_day = {}
@@ -179,20 +230,28 @@ def post_calendar(request):
         "clients": Client.objects.filter(deleted_at__isnull=True),
         "selected_client": selected_client,
         "today": today,
+        "client_record": client_record,
     }
-    return render(request, "operator/posts/calendar.html", context)
+    return context
 
 
-def _compose_initial(request) -> dict:
+def _compose_initial(request, client_record=None) -> dict:
     initial = {}
+    if client_record:
+        initial["client"] = client_record
     client_id = request.GET.get("client")
     campaign_id = request.GET.get("campaign")
     if campaign_id:
-        campaign = Campaign.objects.filter(pk=campaign_id).select_related("client").first()
+        campaigns = Campaign.objects.filter(pk=campaign_id).select_related("client")
+        if client_record:
+            campaigns = campaigns.filter(client=client_record)
+        campaign = campaigns.first()
         if campaign:
             initial["campaign"] = campaign
             initial["client"] = campaign.client
             return initial
+    if client_record:
+        return initial
     if client_id:
         client = Client.objects.filter(pk=client_id, deleted_at__isnull=True).first()
         if client:
@@ -356,11 +415,46 @@ def post_detail(request, pk):
 
 
 @staff_member_required(login_url="operator-login")
+def client_post_detail(request, slug, pk):
+    client_record = _active_client(slug)
+    post = get_object_or_404(
+        Post.objects.select_related("client", "campaign").prefetch_related(
+            "targets",
+            "targets__social_account",
+            "media_attachments__media",
+        ),
+        pk=pk,
+        client=client_record,
+    )
+    return render(
+        request,
+        "operator/posts/detail.html",
+        {
+            "post": post,
+            "client_record": client_record,
+            "has_failed_targets": post.targets.filter(status=PostTargetStatus.FAILED).exists(),
+            "media_previews": _media_previews(post),
+            "target_cards": [_target_card(target) for target in post.targets.all()],
+            "post_badge_class": _post_badge_class(post.status),
+        },
+    )
+
+
+@staff_member_required(login_url="operator-login")
 @require_POST
 def post_retry(request, pk):
     post = get_object_or_404(Post, pk=pk)
     manual_retry_failed_targets.delay(post.pk, request.user.pk)
     return redirect("operator-post-detail", pk=post.pk)
+
+
+@staff_member_required(login_url="operator-login")
+@require_POST
+def client_post_retry(request, slug, pk):
+    client_record = _active_client(slug)
+    post = get_object_or_404(Post, pk=pk, client=client_record)
+    manual_retry_failed_targets.delay(post.pk, request.user.pk)
+    return redirect("operator-client-post-detail", slug=client_record.slug, pk=post.pk)
 
 
 def _media_previews(post: Post) -> list[dict]:
@@ -439,3 +533,12 @@ def _target_note(target: PostTarget) -> str:
     if target.status == PostTargetStatus.PENDING:
         return "Waiting in the publishing queue."
     return "No issues reported."
+
+
+def _active_client(slug):
+    return get_object_or_404(
+        Client,
+        slug=slug,
+        is_active=True,
+        deleted_at__isnull=True,
+    )

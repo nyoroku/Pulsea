@@ -61,7 +61,8 @@ class PostComposerForm(forms.ModelForm):
             "body": forms.Textarea(attrs={"rows": 8}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, client_context=None, **kwargs):
+        self.client_context = client_context
         super().__init__(*args, **kwargs)
         self.fields["campaign"].required = False
         self.fields["campaign"].help_text = "Optional: attach this post to a campaign."
@@ -80,9 +81,24 @@ class PostComposerForm(forms.ModelForm):
             client__deleted_at__isnull=True,
             deleted_at__isnull=True,
         ).select_related("client")
+        if self.client_context:
+            self.fields["client"].required = False
+            self.fields["client"].initial = self.client_context
+            self.fields["client"].widget = forms.HiddenInput()
+            self.fields["campaign"].queryset = self.fields["campaign"].queryset.filter(
+                client=self.client_context
+            )
+            self.fields["social_accounts"].queryset = self.fields[
+                "social_accounts"
+            ].queryset.filter(client=self.client_context)
+            self.fields["existing_media"].queryset = self.fields[
+                "existing_media"
+            ].queryset.filter(client=self.client_context)
 
     def clean(self):
         cleaned_data = super().clean()
+        if self.client_context:
+            cleaned_data["client"] = self.client_context
         client = cleaned_data.get("client")
         campaign = cleaned_data.get("campaign")
         social_accounts = cleaned_data.get("social_accounts")

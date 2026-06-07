@@ -4,9 +4,17 @@
 
 {% block content %}
   <section class="page-heading">
-    <div><p class="eyebrow">Delivery channels</p><h1>Connections</h1><p class="muted">Authorize client channels here before scheduling content. Real OAuth setup is the next integration milestone.</p></div>
+    <div><p class="eyebrow">Delivery channels</p><h1>{% if client_record %}{{ client_record.name }} connections{% else %}Connections{% endif %}</h1><p class="muted">{% if client_record %}Authorize and manage only this client's publishing channels.{% else %}Authorize client channels here before scheduling content. Real OAuth setup is the next integration milestone.{% endif %}</p></div>
     {% if test_mode %}<a class="button" href="{% url 'operator-social-account-create-test' %}">Add test connection</a>{% endif %}
   </section>
+  {% if client_record %}
+    <nav class="workspace-tabs">
+      <a href="{% url 'operator-client-detail' slug=client_record.slug %}">Overview</a>
+      <a href="{% url 'operator-client-post-list' slug=client_record.slug %}">Posts</a>
+      <a href="{% url 'operator-client-post-calendar' slug=client_record.slug %}">Calendar</a>
+      <a href="{% url 'operator-client-social-account-list' slug=client_record.slug %}">Connections</a>
+    </nav>
+  {% endif %}
   {% if test_mode %}<div class="notice"><strong>Local test mode</strong><span>Test connections publish through the fake adapter. They are for workflow demos and do not contact social platforms.</span></div>{% endif %}
   <section class="provider-grid">
     <article class="provider-card">
@@ -15,12 +23,14 @@
       <p class="provider-platforms">Meta OAuth</p>
       <p class="muted">Connect a client's managed Facebook Pages.</p>
       {% if clients and meta_configured %}
-        <form method="get" action="{% url 'operator-meta-oauth-start' %}" class="provider-form">
-          <label for="meta-client">Client</label>
-          <select id="meta-client" name="client" required>
-            <option value="">Choose client</option>
-            {% for client_record in clients %}<option value="{{ client_record.pk }}">{{ client_record.name }}</option>{% endfor %}
-          </select>
+        <form method="get" action="{% if client_record %}{% url 'operator-client-meta-oauth-start' slug=client_record.slug %}{% else %}{% url 'operator-meta-oauth-start' %}{% endif %}" class="provider-form">
+          {% if not client_record %}
+            <label for="meta-client">Client</label>
+            <select id="meta-client" name="client" required>
+              <option value="">Choose client</option>
+              {% for client_record in clients %}<option value="{{ client_record.pk }}">{{ client_record.name }}</option>{% endfor %}
+            </select>
+          {% endif %}
           <button type="submit">Connect Facebook Pages</button>
         </form>
       {% elif not meta_configured %}
@@ -35,12 +45,14 @@
       <p class="provider-platforms">Instagram Login</p>
       <p class="muted">Connect a client's Instagram Business or Creator account directly.</p>
       {% if clients and instagram_configured %}
-        <form method="get" action="{% url 'operator-instagram-oauth-start' %}" class="provider-form">
-          <label for="instagram-client">Client</label>
-          <select id="instagram-client" name="client" required>
-            <option value="">Choose client</option>
-            {% for client_record in clients %}<option value="{{ client_record.pk }}">{{ client_record.name }}</option>{% endfor %}
-          </select>
+        <form method="get" action="{% if client_record %}{% url 'operator-client-instagram-oauth-start' slug=client_record.slug %}{% else %}{% url 'operator-instagram-oauth-start' %}{% endif %}" class="provider-form">
+          {% if not client_record %}
+            <label for="instagram-client">Client</label>
+            <select id="instagram-client" name="client" required>
+              <option value="">Choose client</option>
+              {% for client_record in clients %}<option value="{{ client_record.pk }}">{{ client_record.name }}</option>{% endfor %}
+            </select>
+          {% endif %}
           <button type="submit">Connect Instagram</button>
         </form>
       {% elif not instagram_configured %}
@@ -55,12 +67,14 @@
       <p class="provider-platforms">Pinterest OAuth</p>
       <p class="muted">Connect a client's Pinterest boards for image Pin publishing.</p>
       {% if clients and pinterest_configured %}
-        <form method="get" action="{% url 'operator-pinterest-oauth-start' %}" class="provider-form">
-          <label for="pinterest-client">Client</label>
-          <select id="pinterest-client" name="client" required>
-            <option value="">Choose client</option>
-            {% for client_record in clients %}<option value="{{ client_record.pk }}">{{ client_record.name }}</option>{% endfor %}
-          </select>
+        <form method="get" action="{% if client_record %}{% url 'operator-client-pinterest-oauth-start' slug=client_record.slug %}{% else %}{% url 'operator-pinterest-oauth-start' %}{% endif %}" class="provider-form">
+          {% if not client_record %}
+            <label for="pinterest-client">Client</label>
+            <select id="pinterest-client" name="client" required>
+              <option value="">Choose client</option>
+              {% for client_record in clients %}<option value="{{ client_record.pk }}">{{ client_record.name }}</option>{% endfor %}
+            </select>
+          {% endif %}
           <button type="submit">Connect Pinterest</button>
         </form>
       {% elif not pinterest_configured %}
@@ -75,6 +89,6 @@
   </section>
   <section class="panel glass-panel">
     <div class="section-heading"><div><h2>Connected accounts</h2><p class="muted">Accounts available to the post composer.</p></div></div>
-    {% if account_rows %}<div class="table-wrap"><table><thead><tr><th>Account</th><th>Client</th><th>Platform</th><th>Status</th><th></th></tr></thead><tbody>{% for row in account_rows %}<tr><td><strong>{{ row.account.account_name }}</strong><br><span class="muted">{{ row.account.platform_account_id }}</span></td><td>{{ row.account.client.name }}</td><td><span class="platform-chip"><span class="platform-icon {{ row.meta.class }}">{{ row.meta.icon }}</span>{{ row.meta.label }}</span></td><td><span class="badge {% if row.account.is_active %}badge-good{% else %}badge-muted{% endif %}">{{ row.account.get_connection_health_display }}</span></td><td class="table-action">{% if row.account.is_active %}<form method="post" action="{% url 'operator-social-account-disconnect' pk=row.account.pk %}">{% csrf_token %}<button class="button-link button-inline" type="submit">Disconnect</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state"><h2>No connections yet</h2><p>Add a local test connection now. Real platform authorization will appear here as OAuth providers are configured.</p></div>{% endif %}
+    {% if account_rows %}<div class="table-wrap"><table><thead><tr><th>Account</th>{% if not client_record %}<th>Client</th>{% endif %}<th>Platform</th><th>Status</th><th></th></tr></thead><tbody>{% for row in account_rows %}<tr><td><strong>{{ row.account.account_name }}</strong><br><span class="muted">{{ row.account.platform_account_id }}</span></td>{% if not client_record %}<td>{{ row.account.client.name }}</td>{% endif %}<td><span class="platform-chip"><span class="platform-icon {{ row.meta.class }}">{{ row.meta.icon }}</span>{{ row.meta.label }}</span></td><td><span class="badge {% if row.account.is_active %}badge-good{% else %}badge-muted{% endif %}">{{ row.account.get_connection_health_display }}</span></td><td class="table-action">{% if row.account.is_active %}<form method="post" action="{% if client_record %}{% url 'operator-client-social-account-disconnect' slug=client_record.slug pk=row.account.pk %}{% else %}{% url 'operator-social-account-disconnect' pk=row.account.pk %}{% endif %}">{% csrf_token %}<button class="button-link button-inline" type="submit">Disconnect</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state"><h2>No connections yet</h2><p>Add a local test connection now. Real platform authorization will appear here as OAuth providers are configured.</p></div>{% endif %}
   </section>
 {% endblock %}

@@ -6,14 +6,29 @@
   <section class="hero-panel">
     <div>
       <p class="eyebrow">Publishing command</p>
-      <h1>Posts</h1>
-      <p class="muted">Standalone ideas, campaign content, scheduled work, and live delivery in one place.</p>
+      <h1>{% if client_record %}{{ client_record.name }} posts{% else %}Posts{% endif %}</h1>
+      <p class="muted">
+        {% if client_record %}
+          Standalone ideas, campaign content, scheduled work, and live delivery for this workspace.
+        {% else %}
+          Standalone ideas, campaign content, scheduled work, and live delivery in one place.
+        {% endif %}
+      </p>
     </div>
     <div class="action-bar">
-      <a class="button-secondary" href="{% url 'operator-post-calendar' %}">Open calendar</a>
-      <a class="button" href="{% url 'operator-post-compose' %}">Compose post</a>
+      <a class="button-secondary" href="{% if client_record %}{% url 'operator-client-post-calendar' slug=client_record.slug %}{% else %}{% url 'operator-post-calendar' %}{% endif %}">Open calendar</a>
+      <a class="button" href="{% if client_record %}{% url 'operator-client-post-compose' slug=client_record.slug %}{% else %}{% url 'operator-post-compose' %}{% endif %}">Compose post</a>
     </div>
   </section>
+
+  {% if client_record %}
+    <nav class="workspace-tabs">
+      <a href="{% url 'operator-client-detail' slug=client_record.slug %}">Overview</a>
+      <a href="{% url 'operator-client-post-list' slug=client_record.slug %}">Posts</a>
+      <a href="{% url 'operator-client-post-calendar' slug=client_record.slug %}">Calendar</a>
+      <a href="{% url 'operator-client-social-account-list' slug=client_record.slug %}">Connections</a>
+    </nav>
+  {% endif %}
 
   <section class="panel glass-panel">
     <form method="get" class="filter-bar enhanced-filter">
@@ -21,15 +36,17 @@
         Search
         <input type="search" name="q" value="{{ query }}" placeholder="Title, copy, client, or campaign">
       </label>
-      <label>
-        Client
-        <select name="client">
-          <option value="">All clients</option>
-          {% for client_record in clients %}
-            <option value="{{ client_record.pk }}" {% if selected_client == client_record.pk|stringformat:"s" %}selected{% endif %}>{{ client_record.name }}</option>
-          {% endfor %}
-        </select>
-      </label>
+      {% if not client_record %}
+        <label>
+          Client
+          <select name="client">
+            <option value="">All clients</option>
+            {% for client_record in clients %}
+              <option value="{{ client_record.pk }}" {% if selected_client == client_record.pk|stringformat:"s" %}selected{% endif %}>{{ client_record.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% endif %}
       <label>
         Status
         <select name="status">
@@ -49,10 +66,10 @@
         <article class="post-card">
           <div class="post-card-main">
             <span class="badge {{ row.badge_class }}">{{ row.post.get_status_display }}</span>
-            <h2><a href="{% url 'operator-post-detail' pk=row.post.pk %}">{{ row.post.title }}</a></h2>
+            <h2><a href="{% if client_record %}{% url 'operator-client-post-detail' slug=client_record.slug pk=row.post.pk %}{% else %}{% url 'operator-post-detail' pk=row.post.pk %}{% endif %}">{{ row.post.title }}</a></h2>
             <p class="muted">
-              {{ row.post.client.name }}
-              {% if row.post.campaign %} / {{ row.post.campaign.name }}{% else %} / No campaign{% endif %}
+              {% if not client_record %}{{ row.post.client.name }} / {% endif %}
+              {% if row.post.campaign %}{{ row.post.campaign.name }}{% else %}No campaign{% endif %}
               / {{ row.calendar_date }}
             </p>
           </div>
@@ -66,7 +83,7 @@
               <span class="muted">No platform targets</span>
             {% endfor %}
           </div>
-          <a class="button-secondary" href="{% url 'operator-post-detail' pk=row.post.pk %}">Inspect</a>
+          <a class="button-secondary" href="{% if client_record %}{% url 'operator-client-post-detail' slug=client_record.slug pk=row.post.pk %}{% else %}{% url 'operator-post-detail' pk=row.post.pk %}{% endif %}">Inspect</a>
         </article>
       {% endfor %}
     </section>

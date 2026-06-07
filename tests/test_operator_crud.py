@@ -200,6 +200,43 @@ def test_campaign_detail_links_to_prefilled_post_composer(client, staff_user):
 
 
 @pytest.mark.django_db
+def test_client_scoped_campaign_create_uses_workspace_client(client, staff_user):
+    client.force_login(staff_user)
+    client_record = Client.objects.create(
+        name="Workspace Campaign Client",
+        slug="workspace-campaign-client",
+        industry=ClientIndustry.EVENTS,
+    )
+
+    get_response = client.get(
+        reverse("operator-client-campaign-create", args=[client_record.slug])
+    )
+
+    assert get_response.status_code == 200
+    assert b'<select name="client"' not in get_response.content
+
+    post_response = client.post(
+        reverse("operator-client-campaign-create", args=[client_record.slug]),
+        {
+            "name": "Workspace Launch",
+            "description": "Scoped campaign",
+            "start_date": "2026-06-01",
+            "end_date": "2026-06-07",
+            "status": CampaignStatus.ACTIVE,
+            "color": "#4f46e5",
+        },
+    )
+    campaign = Campaign.objects.get(name="Workspace Launch")
+
+    assert post_response.status_code == 302
+    assert post_response.url == reverse(
+        "operator-client-campaign-detail",
+        args=[client_record.slug, campaign.pk],
+    )
+    assert campaign.client == client_record
+
+
+@pytest.mark.django_db
 def test_content_calendar_shows_scheduled_posts(client, staff_user):
     client.force_login(staff_user)
     client_record = Client.objects.create(

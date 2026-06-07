@@ -958,6 +958,33 @@ code {
   align-items: start;
 }
 
+.workspace-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: -0.35rem 0 1.25rem;
+  padding: 0.45rem;
+  border: 1px solid rgba(220, 228, 223, 0.72);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 1rem 2.2rem rgba(23, 63, 53, 0.08);
+}
+
+.workspace-tabs a {
+  padding: 0.65rem 1rem;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.workspace-tabs a:hover {
+  color: var(--deep);
+  background: rgba(234, 115, 69, 0.1);
+}
+
 .workspace-main,
 .workspace-side,
 .feed-list,

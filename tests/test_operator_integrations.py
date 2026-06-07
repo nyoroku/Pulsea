@@ -126,6 +126,36 @@ def test_meta_oauth_start_redirects_with_selected_client_and_state(
 
 
 @pytest.mark.django_db
+def test_client_scoped_connections_hide_client_picker_and_start_meta_oauth(
+    client,
+    integration_staff_user,
+    integration_client,
+    settings,
+):
+    settings.META_APP_ID = "meta-app-id"
+    settings.META_APP_SECRET = "meta-app-secret"
+    settings.META_OAUTH_REDIRECT_URI = "http://localhost:8000/operator/connections/meta/callback/"
+    client.force_login(integration_staff_user)
+
+    list_response = client.get(
+        reverse("operator-client-social-account-list", args=[integration_client.slug])
+    )
+
+    assert list_response.status_code == 200
+    assert b"Connection Client connections" in list_response.content
+    assert b'<select id="meta-client"' not in list_response.content
+
+    start_response = client.get(
+        reverse("operator-client-meta-oauth-start", args=[integration_client.slug])
+    )
+
+    assert start_response.status_code == 302
+    assert start_response.url.startswith("https://www.facebook.com/")
+    assert client.session["meta_oauth"]["client_id"] == integration_client.pk
+    assert client.session["meta_oauth"]["client_slug"] == integration_client.slug
+
+
+@pytest.mark.django_db
 def test_meta_oauth_callback_rejects_invalid_state(
     client,
     integration_staff_user,

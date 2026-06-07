@@ -71,7 +71,21 @@ PROVIDER_GROUPS = [
 
 @staff_member_required(login_url="operator-login")
 def social_account_list(request):
+    context = _social_account_list_context()
+    return render(request, "operator/integrations/list.html", context)
+
+
+@staff_member_required(login_url="operator-login")
+def client_social_account_list(request, slug):
+    client_record = _active_client(slug)
+    context = _social_account_list_context(client_record=client_record)
+    return render(request, "operator/integrations/list.html", context)
+
+
+def _social_account_list_context(client_record=None):
     accounts = SocialAccount.objects.select_related("client")
+    if client_record:
+        accounts = accounts.filter(client=client_record)
     account_rows = [
         {
             "account": account,
@@ -79,22 +93,19 @@ def social_account_list(request):
         }
         for account in accounts
     ]
-    return render(
-        request,
-        "operator/integrations/list.html",
-        {
-            "account_rows": account_rows,
-            "provider_groups": PROVIDER_GROUPS,
-            "test_mode": settings.PUBLISHING_ADAPTER_MODE == "fake",
-            "meta_configured": meta_is_configured(),
-            "meta_callback_url": settings.META_OAUTH_REDIRECT_URI,
-            "instagram_configured": instagram_is_configured(),
-            "instagram_callback_url": settings.INSTAGRAM_OAUTH_REDIRECT_URI,
-            "pinterest_configured": pinterest_is_configured(),
-            "pinterest_callback_url": settings.PINTEREST_OAUTH_REDIRECT_URI,
-            "clients": Client.objects.filter(is_active=True, deleted_at__isnull=True),
-        },
-    )
+    return {
+        "account_rows": account_rows,
+        "provider_groups": PROVIDER_GROUPS,
+        "test_mode": settings.PUBLISHING_ADAPTER_MODE == "fake",
+        "meta_configured": meta_is_configured(),
+        "meta_callback_url": settings.META_OAUTH_REDIRECT_URI,
+        "instagram_configured": instagram_is_configured(),
+        "instagram_callback_url": settings.INSTAGRAM_OAUTH_REDIRECT_URI,
+        "pinterest_configured": pinterest_is_configured(),
+        "pinterest_callback_url": settings.PINTEREST_OAUTH_REDIRECT_URI,
+        "clients": Client.objects.filter(is_active=True, deleted_at__isnull=True),
+        "client_record": client_record,
+    }
 
 
 @staff_member_required(login_url="operator-login")
@@ -123,18 +134,38 @@ def social_account_disconnect(request, pk):
 
 
 @staff_member_required(login_url="operator-login")
+@require_POST
+def client_social_account_disconnect(request, slug, pk):
+    client_record = _active_client(slug)
+    social_account = get_object_or_404(SocialAccount, pk=pk, client=client_record)
+    social_account.is_active = False
+    social_account.connection_health = ConnectionHealth.DISCONNECTED
+    social_account.save(update_fields=["is_active", "connection_health", "updated_at"])
+    return redirect("operator-client-social-account-list", slug=client_record.slug)
+
+
+@staff_member_required(login_url="operator-login")
 def meta_oauth_start(request):
+    return _meta_oauth_start(request)
+
+
+@staff_member_required(login_url="operator-login")
+def client_meta_oauth_start(request, slug):
+    client_record = _active_client(slug)
+    return _meta_oauth_start(request, client_record=client_record)
+
+
+def _meta_oauth_start(request, client_record=None):
     if not meta_is_configured():
         messages.error(request, "Add META_APP_SECRET to .env before connecting Meta.")
-        return redirect("operator-social-account-list")
-    client = get_object_or_404(
-        Client,
-        pk=request.GET.get("client"),
-        is_active=True,
-        deleted_at__isnull=True,
-    )
+        return _redirect_connections(client_record)
+    client = client_record or _client_from_query(request)
     state = token_urlsafe(32)
-    request.session["meta_oauth"] = {"client_id": client.pk, "state": state}
+    request.session["meta_oauth"] = {
+        "client_id": client.pk,
+        "client_slug": client.slug,
+        "state": state,
+    }
     return redirect(build_meta_authorization_url(state))
 
 
@@ -151,11 +182,11 @@ def meta_oauth_callback(request):
         return redirect("operator-social-account-list")
     if request.GET.get("error"):
         messages.error(request, "Meta authorization was cancelled or denied.")
-        return redirect("operator-social-account-list")
+        return _redirect_connections_from_session(expected)
     code = request.GET.get("code", "")
     if not code:
         messages.error(request, "Meta did not return an authorization code.")
-        return redirect("operator-social-account-list")
+        return _redirect_connections_from_session(expected)
     client = get_object_or_404(
         Client,
         pk=expected["client_id"],
@@ -168,7 +199,7 @@ def meta_oauth_callback(request):
         result = save_meta_accounts(client, pages)
     except MetaAPIError as exc:
         messages.error(request, str(exc))
-        return redirect("operator-social-account-list")
+        return _redirect_connections_from_session(expected)
     messages.success(
         request,
         (
@@ -176,25 +207,34 @@ def meta_oauth_callback(request):
             f"{result.instagram_accounts} Instagram account(s) for {client.name}."
         ),
     )
-    return redirect("operator-social-account-list")
+    return _redirect_connections_from_session(expected)
 
 
 @staff_member_required(login_url="operator-login")
 def instagram_oauth_start(request):
+    return _instagram_oauth_start(request)
+
+
+@staff_member_required(login_url="operator-login")
+def client_instagram_oauth_start(request, slug):
+    client_record = _active_client(slug)
+    return _instagram_oauth_start(request, client_record=client_record)
+
+
+def _instagram_oauth_start(request, client_record=None):
     if not instagram_is_configured():
         messages.error(
             request,
             "Add INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET to .env before connecting Instagram.",
         )
-        return redirect("operator-social-account-list")
-    client = get_object_or_404(
-        Client,
-        pk=request.GET.get("client"),
-        is_active=True,
-        deleted_at__isnull=True,
-    )
+        return _redirect_connections(client_record)
+    client = client_record or _client_from_query(request)
     state = token_urlsafe(32)
-    request.session["instagram_oauth"] = {"client_id": client.pk, "state": state}
+    request.session["instagram_oauth"] = {
+        "client_id": client.pk,
+        "client_slug": client.slug,
+        "state": state,
+    }
     return redirect(build_instagram_authorization_url(state))
 
 
@@ -214,11 +254,11 @@ def instagram_oauth_callback(request):
         return redirect("operator-social-account-list")
     if request.GET.get("error"):
         messages.error(request, "Instagram authorization was cancelled or denied.")
-        return redirect("operator-social-account-list")
+        return _redirect_connections_from_session(expected)
     code = request.GET.get("code", "")
     if not code:
         messages.error(request, "Instagram did not return an authorization code.")
-        return redirect("operator-social-account-list")
+        return _redirect_connections_from_session(expected)
     client = get_object_or_404(
         Client,
         pk=expected["client_id"],
@@ -231,30 +271,39 @@ def instagram_oauth_callback(request):
         social_account = save_instagram_account(client, profile, token)
     except InstagramAPIError as exc:
         messages.error(request, str(exc))
-        return redirect("operator-social-account-list")
+        return _redirect_connections_from_session(expected)
     messages.success(
         request,
         f"Connected Instagram account @{social_account.account_name} for {client.name}.",
     )
-    return redirect("operator-social-account-list")
+    return _redirect_connections_from_session(expected)
 
 
 @staff_member_required(login_url="operator-login")
 def pinterest_oauth_start(request):
+    return _pinterest_oauth_start(request)
+
+
+@staff_member_required(login_url="operator-login")
+def client_pinterest_oauth_start(request, slug):
+    client_record = _active_client(slug)
+    return _pinterest_oauth_start(request, client_record=client_record)
+
+
+def _pinterest_oauth_start(request, client_record=None):
     if not pinterest_is_configured():
         messages.error(
             request,
             "Add PINTEREST_APP_ID and PINTEREST_APP_SECRET to .env before connecting Pinterest.",
         )
-        return redirect("operator-social-account-list")
-    client = get_object_or_404(
-        Client,
-        pk=request.GET.get("client"),
-        is_active=True,
-        deleted_at__isnull=True,
-    )
+        return _redirect_connections(client_record)
+    client = client_record or _client_from_query(request)
     state = token_urlsafe(32)
-    request.session["pinterest_oauth"] = {"client_id": client.pk, "state": state}
+    request.session["pinterest_oauth"] = {
+        "client_id": client.pk,
+        "client_slug": client.slug,
+        "state": state,
+    }
     return redirect(build_pinterest_authorization_url(state))
 
 
@@ -274,11 +323,11 @@ def pinterest_oauth_callback(request):
         return redirect("operator-social-account-list")
     if request.GET.get("error"):
         messages.error(request, "Pinterest authorization was cancelled or denied.")
-        return redirect("operator-social-account-list")
+        return _redirect_connections_from_session(expected)
     code = request.GET.get("code", "")
     if not code:
         messages.error(request, "Pinterest did not return an authorization code.")
-        return redirect("operator-social-account-list")
+        return _redirect_connections_from_session(expected)
     client = get_object_or_404(
         Client,
         pk=expected["client_id"],
@@ -291,12 +340,12 @@ def pinterest_oauth_callback(request):
         result = save_pinterest_boards(client, boards, token)
     except PinterestAPIError as exc:
         messages.error(request, str(exc))
-        return redirect("operator-social-account-list")
+        return _redirect_connections_from_session(expected)
     messages.success(
         request,
         f"Connected {result.boards} Pinterest board(s) for {client.name}.",
     )
-    return redirect("operator-social-account-list")
+    return _redirect_connections_from_session(expected)
 
 
 @csrf_exempt
@@ -314,3 +363,34 @@ def instagram_webhook(request):
             return HttpResponse(challenge, content_type="text/plain")
         return HttpResponse("Webhook verification failed.", status=403)
     return JsonResponse({"status": "ok"})
+
+
+def _active_client(slug):
+    return get_object_or_404(
+        Client,
+        slug=slug,
+        is_active=True,
+        deleted_at__isnull=True,
+    )
+
+
+def _client_from_query(request):
+    return get_object_or_404(
+        Client,
+        pk=request.GET.get("client"),
+        is_active=True,
+        deleted_at__isnull=True,
+    )
+
+
+def _redirect_connections(client_record=None):
+    if client_record:
+        return redirect("operator-client-social-account-list", slug=client_record.slug)
+    return redirect("operator-social-account-list")
+
+
+def _redirect_connections_from_session(session_data):
+    client_slug = session_data.get("client_slug")
+    if client_slug:
+        return redirect("operator-client-social-account-list", slug=client_slug)
+    return redirect("operator-social-account-list")

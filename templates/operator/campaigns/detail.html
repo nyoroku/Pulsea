@@ -14,10 +14,10 @@
       </p>
     </div>
     <div class="action-bar">
-      <a class="button" href="{% url 'operator-post-compose' %}?campaign={{ campaign.pk }}">Add post to campaign</a>
-      <a class="button-secondary" href="{% url 'operator-campaign-edit' pk=campaign.pk %}">Edit campaign</a>
+      <a class="button" href="{% if client_record %}{% url 'operator-client-post-compose' slug=client_record.slug %}?campaign={{ campaign.pk }}{% else %}{% url 'operator-post-compose' %}?campaign={{ campaign.pk }}{% endif %}">Add post to campaign</a>
+      <a class="button-secondary" href="{% if client_record %}{% url 'operator-client-campaign-edit' slug=client_record.slug pk=campaign.pk %}{% else %}{% url 'operator-campaign-edit' pk=campaign.pk %}{% endif %}">Edit campaign</a>
       {% if campaign.status != "ARCHIVED" %}
-        <form method="post" action="{% url 'operator-campaign-archive' pk=campaign.pk %}">
+        <form method="post" action="{% if client_record %}{% url 'operator-client-campaign-archive' slug=client_record.slug pk=campaign.pk %}{% else %}{% url 'operator-campaign-archive' pk=campaign.pk %}{% endif %}">
           {% csrf_token %}<button class="button-secondary" type="submit">Archive</button>
         </form>
       {% endif %}
@@ -44,12 +44,12 @@
         <h2>Campaign posts</h2>
         <p class="muted">Every post attached to this campaign.</p>
       </div>
-      <a class="button-secondary" href="{% url 'operator-post-compose' %}?campaign={{ campaign.pk }}">Add post</a>
+      <a class="button-secondary" href="{% if client_record %}{% url 'operator-client-post-compose' slug=client_record.slug %}?campaign={{ campaign.pk }}{% else %}{% url 'operator-post-compose' %}?campaign={{ campaign.pk }}{% endif %}">Add post</a>
     </div>
     {% if posts %}
       <div class="feed-list">
         {% for post in posts %}
-          <a class="feed-item" href="{% url 'operator-post-detail' pk=post.pk %}">
+          <a class="feed-item" href="{% if client_record %}{% url 'operator-client-post-detail' slug=client_record.slug pk=post.pk %}{% else %}{% url 'operator-post-detail' pk=post.pk %}{% endif %}">
             <span class="status-dot status-{{ post.status|lower }}"></span>
             <div>
               <strong>{{ post.title }}</strong>

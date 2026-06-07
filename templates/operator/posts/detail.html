@@ -8,13 +8,13 @@
       <p class="eyebrow">Post delivery</p>
       <h1>{{ post.title }}</h1>
       <p class="muted">
-        {{ post.client.name }}
+        <a href="{% url 'operator-client-detail' slug=post.client.slug %}">{{ post.client.name }}</a>
         {% if post.campaign %} / {{ post.campaign.name }}{% else %} / No campaign{% endif %}
         / <span class="badge {{ post_badge_class }}">{{ post.get_status_display }}</span>
       </p>
     </div>
     {% if has_failed_targets %}
-      <form method="post" action="{% url 'operator-post-retry' pk=post.pk %}">
+      <form method="post" action="{% if client_record %}{% url 'operator-client-post-retry' slug=client_record.slug pk=post.pk %}{% else %}{% url 'operator-post-retry' pk=post.pk %}{% endif %}">
         {% csrf_token %}
         <button type="submit">Retry failed targets</button>
       </form>

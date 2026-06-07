@@ -152,6 +152,65 @@ def test_composer_prefills_client_and_campaign_from_campaign_link(
 
 
 @pytest.mark.django_db
+def test_client_scoped_composer_uses_workspace_client_without_dropdown(
+    client,
+    post_staff_user,
+    post_client_record,
+    post_social_account,
+):
+    client.force_login(post_staff_user)
+
+    get_response = client.get(
+        reverse("operator-client-post-compose", args=[post_client_record.slug])
+    )
+
+    assert get_response.status_code == 200
+    assert b"Build for Post Client" in get_response.content
+    assert b'<select name="client"' not in get_response.content
+
+    post_response = client.post(
+        reverse("operator-client-post-compose", args=[post_client_record.slug]),
+        {
+            "title": "Workspace draft",
+            "body": "This belongs to the clicked workspace.",
+            "social_accounts": [post_social_account.pk],
+            "action": "draft",
+        },
+    )
+    post = Post.objects.get(title="Workspace draft")
+
+    assert post_response.status_code == 302
+    assert post_response.url == reverse(
+        "operator-client-post-detail",
+        args=[post_client_record.slug, post.pk],
+    )
+    assert post.client == post_client_record
+
+
+@pytest.mark.django_db
+def test_client_scoped_post_list_hides_client_filter_and_filters_posts(
+    client,
+    post_staff_user,
+    post_client_record,
+):
+    other_client = Client.objects.create(
+        name="Other Workspace",
+        slug="other-workspace",
+        industry=ClientIndustry.OTHER,
+    )
+    Post.objects.create(client=post_client_record, title="Visible workspace post")
+    Post.objects.create(client=other_client, title="Hidden global post")
+    client.force_login(post_staff_user)
+
+    response = client.get(reverse("operator-client-post-list", args=[post_client_record.slug]))
+
+    assert response.status_code == 200
+    assert b"Visible workspace post" in response.content
+    assert b"Hidden global post" not in response.content
+    assert b'<select name="client"' not in response.content
+
+
+@pytest.mark.django_db
 def test_composer_rejects_cross_client_campaign(
     client,
     post_staff_user,

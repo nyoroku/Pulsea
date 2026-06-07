@@ -16,15 +16,22 @@ class CampaignForm(forms.ModelForm):
             "color": forms.TextInput(attrs={"type": "color"}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, client_context=None, **kwargs):
+        self.client_context = client_context
         super().__init__(*args, **kwargs)
         allowed_clients = Q(is_active=True, deleted_at__isnull=True)
         if self.instance.pk:
             allowed_clients |= Q(pk=self.instance.client_id)
         self.fields["client"].queryset = Client.objects.filter(allowed_clients)
+        if self.client_context:
+            self.fields["client"].required = False
+            self.fields["client"].initial = self.client_context
+            self.fields["client"].widget = forms.HiddenInput()
 
     def clean(self):
         cleaned_data = super().clean()
+        if self.client_context:
+            cleaned_data["client"] = self.client_context
         start_date = cleaned_data.get("start_date")
         end_date = cleaned_data.get("end_date")
         if start_date and end_date and end_date < start_date:
