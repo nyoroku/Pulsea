@@ -1,0 +1,22 @@
+{% extends "operator/base.html" %}
+
+{% block title %}{{ client_record.name }} | Pulsea Operator{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <div><p class="eyebrow">Client profile</p><h1>{{ client_record.name }}</h1><p class="muted">{{ client_record.get_industry_display }} · <span class="badge {% if client_record.is_active %}badge-good{% else %}badge-muted{% endif %}">{% if client_record.is_active %}Active{% else %}Inactive{% endif %}</span></p></div>
+    <div class="action-bar"><a class="button" href="{% url 'operator-client-edit' slug=client_record.slug %}">Edit client</a><a class="button button-secondary" href="{% url 'operator-social-account-list' %}">Manage connections</a></div>
+  </section>
+  <section class="panel">
+    <div class="section-heading"><div><h2>Client setup</h2><p class="muted">Connect social accounts before composing publishable posts.</p></div></div>
+    <div class="detail-grid"><div><span class="detail-label">Slug</span><strong>{{ client_record.slug }}</strong></div><div><span class="detail-label">Industry</span><strong>{{ client_record.get_industry_display }}</strong></div></div>
+  </section>
+  <section class="panel danger-zone">
+    <h2>Account controls</h2>
+    <p class="muted">Use these actions only when the client relationship changes.</p>
+    <div class="action-bar">
+      {% if client_record.is_active %}<form method="post" action="{% url 'operator-client-deactivate' slug=client_record.slug %}">{% csrf_token %}<button class="button-secondary" type="submit">Deactivate</button></form>{% endif %}
+      <form method="post" action="{% url 'operator-client-delete' slug=client_record.slug %}">{% csrf_token %}<button class="button-danger" type="submit">Soft-delete</button></form>
+    </div>
+  </section>
+{% endblock %}

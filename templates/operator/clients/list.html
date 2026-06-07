@@ -1,0 +1,35 @@
+{% extends "operator/base.html" %}
+
+{% block title %}Clients | Pulsea Operator{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <div>
+      <p class="eyebrow">Workspace</p>
+      <h1>Clients</h1>
+      <p class="muted">Manage the brands, teams, and accounts your agency works with.</p>
+    </div>
+    <a class="button" href="{% url 'operator-client-create' %}">Add client</a>
+  </section>
+  <section class="panel">
+    {% if clients %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Client</th><th>Industry</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {% for client_record in clients %}
+              <tr>
+                <td><strong>{{ client_record.name }}</strong><br><span class="muted">{{ client_record.slug }}</span></td>
+                <td>{{ client_record.get_industry_display }}</td>
+                <td><span class="badge {% if client_record.is_active %}badge-good{% else %}badge-muted{% endif %}">{% if client_record.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+                <td class="table-action"><a href="{% url 'operator-client-detail' slug=client_record.slug %}">View client</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state"><h2>No clients yet</h2><p>Create your first client to start building campaigns and connecting social accounts.</p></div>
+    {% endif %}
+  </section>
+{% endblock %}

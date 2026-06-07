@@ -1,0 +1,21 @@
+# Platform Integration Matrix
+
+Status: Initial official-documentation pass
+Verified: 2026-05-31
+
+Provider access, app-review state, and controlled-account smoke tests remain
+release gates. Platform-specific behavior belongs behind adapters and feature
+flags.
+
+| Platform | Publish path | Scopes and review gates | Constraints captured for implementation | Source |
+| --- | --- | --- | --- | --- |
+| Google Business Profile | `POST https://mybusiness.googleapis.com/v4/{parent=accounts/*/locations/*}/localPosts` | Request GBP API access first; use `https://www.googleapis.com/auth/business.manage`. Google states that GBP has no sandbox. | Support standard, event, offer, and CTA posts. Product posts are unavailable. Validate controlled-account behavior after approval. | [Basic setup](https://developers.google.com/my-business/content/basic-setup), [create post](https://developers.google.com/my-business/reference/rest/v4/accounts.locations.localPosts/create), [post guide](https://developers.google.com/my-business/content/posts-data) |
+| TikTok | Query `/v2/post/publish/creator_info/query/`, initialize `/v2/post/publish/video/init/`, upload, then poll `/v2/post/publish/status/fetch/`. | Add Content Posting API and obtain `video.publish` approval. Unaudited clients can post only private content and are capped. | Use current creator-info options in the composer. Support upload URLs expiring after one hour, chunk upload, polling, consent, domain verification for pull-from-URL, and rate-limit handling. TikTok now documents photo posting too; V1 video-only scope should be revisited deliberately. | [Get started](https://developers.tiktok.com/doc/content-posting-api-get-started/), [direct post](https://developers.tiktok.com/doc/content-posting-api-reference-direct-post), [guidelines](https://developers.tiktok.com/doc/content-sharing-guidelines/) |
+| YouTube | `POST https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=...` | Use `https://www.googleapis.com/auth/youtube.upload`. Unverified API projects created after 2020-07-28 upload videos as private until audited. | Use resumable uploads and persist upload progress. Current official reference lists 256 GB maximum size and a 100-unit quota cost for `videos.insert`. | [videos.insert](https://developers.google.com/youtube/v3/docs/videos/insert), [resumable uploads](https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol) |
+| Facebook Pages | Text posts use the Page feed endpoint. Image posts upload binary media to the Page photos endpoint; multiple images are uploaded unpublished and attached to one feed post. Single-video posts upload binary media to the Page videos endpoint. | Use `pages_show_list`, `pages_read_engagement`, and `pages_manage_posts`. Store Page access tokens only. | Live text, multi-image, and single-video publishing are implemented. Mixed media, multiple-video posts, processing-status polling, comments, and insights remain explicit follow-up capabilities. | [Pages API posts](https://developers.facebook.com/docs/pages-api/posts/) |
+| Instagram | Create media containers and publish containers through `graph.instagram.com`. Single videos publish as Reels. Carousels support up to 10 JPEG images, videos, or mixed assets. | Request `instagram_business_basic` and `instagram_business_content_publish` through the Instagram Login flow; keep Facebook Page scopes out of that authorization request. | Direct Instagram Login and live publishing are implemented. Instagram fetches media from a public server, so live delivery requires public S3 URLs. Reel processing is polled once per minute for up to five minutes. Validate a controlled professional account before enabling production schedules. | [Instagram API with Instagram Login](https://www.postman.com/meta/instagram/folder/9vtdu7i/instagram-api-with-instagram-login), [publish content](https://www.postman.com/meta/documentation/23987686-9386f468-7714-490f-9bfc-9442db5c8f00?entity=request-23987686-894be833-d0b6-4877-859e-c61ae6474d64) |
+
+## Known Documentation Gap
+
+Meta's official developer documentation returned a login gate during this pass.
+Treat the Meta rows as a tracked spike, not as a locked implementation contract.

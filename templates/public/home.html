@@ -1,0 +1,36 @@
+{% extends "public/base.html" %}
+
+{% block title %}Pulsea | Social Publishing Workspace{% endblock %}
+
+{% block content %}
+  <section class="public-hero">
+    <p class="eyebrow">Social publishing workspace</p>
+    <h1>Plan, connect, and publish client content from one focused dashboard.</h1>
+    <p class="public-lede">
+      Pulsea helps operators manage client social accounts, upload campaign media, and publish approved
+      posts to connected platforms such as Facebook, Instagram, and Pinterest.
+    </p>
+    <div class="public-actions">
+      <a class="button" href="{% url 'operator-login' %}">Operator login</a>
+      <a class="button-secondary" href="{% url 'privacy-policy' %}">Read privacy policy</a>
+    </div>
+  </section>
+
+  <section class="public-card-grid">
+    <article class="public-card">
+      <span class="card-kicker">01</span>
+      <h2>Client Accounts</h2>
+      <p>Keep each client's connected social accounts separate, organized, and ready for publishing.</p>
+    </article>
+    <article class="public-card">
+      <span class="card-kicker">02</span>
+      <h2>Media Publishing</h2>
+      <p>Upload media, create posts, and send content through approved platform APIs.</p>
+    </article>
+    <article class="public-card">
+      <span class="card-kicker">03</span>
+      <h2>Operator Control</h2>
+      <p>Access is limited to authenticated operators and client portal users.</p>
+    </article>
+  </section>
+{% endblock %}

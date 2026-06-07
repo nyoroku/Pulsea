@@ -1,0 +1,8 @@
+{% extends "operator/base.html" %}
+
+{% block title %}Campaigns | Pulsea Operator{% endblock %}
+
+{% block content %}
+  <section class="page-heading"><div><p class="eyebrow">Planning</p><h1>Campaigns</h1><p class="muted">Group content around launches, promotions, and ongoing client priorities.</p></div><a class="button" href="{% url 'operator-campaign-create' %}">Add campaign</a></section>
+  <section class="panel">{% if campaigns %}<div class="table-wrap"><table><thead><tr><th>Campaign</th><th>Client</th><th>Status</th><th></th></tr></thead><tbody>{% for campaign in campaigns %}<tr><td><strong>{{ campaign.name }}</strong></td><td>{{ campaign.client.name }}</td><td><span class="badge">{{ campaign.get_status_display }}</span></td><td class="table-action"><a href="{% url 'operator-campaign-detail' pk=campaign.pk %}">View campaign</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state"><h2>No campaigns yet</h2><p>Add a client first, then create a campaign for their content.</p></div>{% endif %}</section>
+{% endblock %}

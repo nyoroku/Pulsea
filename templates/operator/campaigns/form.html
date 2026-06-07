@@ -1,0 +1,8 @@
+{% extends "operator/base.html" %}
+
+{% block title %}{% if campaign %}Edit{% else %}Add{% endif %} Campaign | Pulsea{% endblock %}
+
+{% block content %}
+  <section class="page-heading compact"><div><p class="eyebrow">Campaigns</p><h1>{% if campaign %}Edit{% else %}Add{% endif %} campaign</h1><p class="muted">Give the work a clear purpose and timeline.</p></div></section>
+  <section class="panel form-panel"><form method="post" class="stack-form">{% csrf_token %}{{ form.as_p }}<div class="action-bar"><button type="submit">Save campaign</button><a class="button-link" href="{% url 'operator-campaign-list' %}">Cancel</a></div></form></section>
+{% endblock %}

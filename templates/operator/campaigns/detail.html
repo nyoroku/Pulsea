@@ -1,0 +1,8 @@
+{% extends "operator/base.html" %}
+
+{% block title %}{{ campaign.name }} | Pulsea Operator{% endblock %}
+
+{% block content %}
+  <section class="page-heading"><div><p class="eyebrow">Campaign</p><h1>{{ campaign.name }}</h1><p class="muted">{{ campaign.client.name }} · <span class="badge">{{ campaign.get_status_display }}</span></p></div><div class="action-bar"><a class="button" href="{% url 'operator-campaign-edit' pk=campaign.pk %}">Edit campaign</a>{% if campaign.status != "ARCHIVED" %}<form method="post" action="{% url 'operator-campaign-archive' pk=campaign.pk %}">{% csrf_token %}<button class="button-secondary" type="submit">Archive</button></form>{% endif %}</div></section>
+  <section class="panel"><h2>Campaign details</h2><div class="detail-grid"><div><span class="detail-label">Client</span><strong>{{ campaign.client.name }}</strong></div><div><span class="detail-label">Status</span><strong>{{ campaign.get_status_display }}</strong></div>{% if campaign.start_date %}<div><span class="detail-label">Starts</span><strong>{{ campaign.start_date }}</strong></div>{% endif %}{% if campaign.end_date %}<div><span class="detail-label">Ends</span><strong>{{ campaign.end_date }}</strong></div>{% endif %}</div>{% if campaign.description %}<p>{{ campaign.description }}</p>{% endif %}</section>
+{% endblock %}

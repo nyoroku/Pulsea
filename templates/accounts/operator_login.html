@@ -1,0 +1,40 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Operator Sign In | Pulsea</title>
+    <link rel="stylesheet" href="{% static 'css/pulsea.css' %}">
+  </head>
+  <body class="auth-page">
+    <main class="auth-shell">
+      <section class="auth-intro">
+        <a class="brand" href="{% url 'home' %}">
+          <span class="brand-mark">P</span>
+          <span>Pulsea</span>
+        </a>
+        <p class="eyebrow">Agency command center</p>
+        <h1>Keep every client campaign moving.</h1>
+        <p class="auth-copy">
+          Create clients, shape campaigns, and manage publishing from one focused workspace.
+        </p>
+      </section>
+      <section class="auth-card">
+        <p class="eyebrow">Operator access</p>
+        <h2>Welcome back</h2>
+        <p class="muted">Sign in with your Pulsea operator account.</p>
+        <form method="post" class="stack-form">
+          {% csrf_token %}
+          {{ form.as_p }}
+          {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+          <button type="submit">Sign in to Pulsea</button>
+        </form>
+        <p class="auth-footnote">
+          Looking for the client portal?
+          <a href="{% url 'portal-login' %}">Client sign in</a>
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

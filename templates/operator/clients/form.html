@@ -1,0 +1,19 @@
+{% extends "operator/base.html" %}
+
+{% block title %}{% if client_record %}Edit{% else %}Add{% endif %} Client | Pulsea{% endblock %}
+
+{% block content %}
+  <section class="page-heading compact">
+    <div><p class="eyebrow">Clients</p><h1>{% if client_record %}Edit{% else %}Add{% endif %} client</h1><p class="muted">Keep the essentials tidy now. Social connections come next.</p></div>
+  </section>
+  <section class="panel form-panel">
+    <form method="post" class="stack-form">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <div class="action-bar">
+        <button type="submit">Save client</button>
+        <a class="button-link" href="{% url 'operator-client-list' %}">Cancel</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}

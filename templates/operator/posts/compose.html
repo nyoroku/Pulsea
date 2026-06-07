@@ -1,0 +1,37 @@
+{% extends "operator/base.html" %}
+
+{% block title %}Compose Post | Pulsea Operator{% endblock %}
+
+{% block content %}
+  <section class="page-heading compact"><div><p class="eyebrow">Publishing</p><h1>Compose post</h1><p class="muted">Write once, choose the right accounts, and decide when it should go live.</p></div></section>
+  <section class="panel form-panel wide"><form method="post" enctype="multipart/form-data" class="stack-form">{% csrf_token %}{{ form.as_p }}<div class="notice"><strong>Media delivery</strong><span>PNG, WebP, and wide/tall images are automatically converted into Instagram-safe JPEGs. Facebook supports multiple images or one video, but not mixed image/video posts yet. Instagram supports MP4/MOV videos as Reels and up to 10 carousel items.</span></div><div class="action-bar"><button class="button-secondary" type="submit" name="action" value="draft">Save draft</button><button type="submit" name="action" value="schedule">Schedule</button><button type="submit" name="action" value="publish_now">Publish now</button></div></form></section>
+  <script>
+    (() => {
+      const firstInput = document.getElementById("id_media_uploads");
+      if (!firstInput) return;
+
+      const field = firstInput.closest("p");
+      const uploadList = document.createElement("div");
+      const addButton = document.createElement("button");
+
+      uploadList.className = "media-upload-list";
+      firstInput.parentNode.insertBefore(uploadList, firstInput);
+      uploadList.appendChild(firstInput);
+
+      addButton.type = "button";
+      addButton.className = "button-secondary media-upload-add";
+      addButton.textContent = "Add another media file";
+      field.insertBefore(addButton, field.querySelector(".helptext"));
+
+      addButton.addEventListener("click", () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.name = firstInput.name;
+        input.accept = firstInput.accept;
+        input.className = "media-upload-input";
+        input.setAttribute("aria-label", "Additional media upload");
+        uploadList.appendChild(input);
+      });
+    })();
+  </script>
+{% endblock %}

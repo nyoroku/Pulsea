@@ -1,0 +1,26 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Pulsea{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/pulsea.css' %}">
+  </head>
+  <body class="public-page">
+    <header class="public-nav">
+      <a class="brand" href="{% url 'home' %}">
+        <span class="brand-mark">P</span>
+        <span>Pulsea</span>
+      </a>
+      <nav class="public-links">
+        <a href="{% url 'privacy-policy' %}">Privacy</a>
+        <a href="{% url 'terms-of-service' %}">Terms</a>
+        <a class="button button-small" href="{% url 'operator-login' %}">Operator login</a>
+      </nav>
+    </header>
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

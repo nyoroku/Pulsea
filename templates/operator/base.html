@@ -1,0 +1,42 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Pulsea Operator{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/pulsea.css' %}">
+  </head>
+  <body class="operator-page">
+    <header class="topbar">
+      <a class="brand" href="{% url 'operator-dashboard' %}">
+        <span class="brand-mark">P</span>
+        <span>Pulsea</span>
+      </a>
+      <nav class="main-nav">
+        <a href="{% url 'operator-dashboard' %}">Overview</a>
+        <a href="{% url 'operator-client-list' %}">Clients</a>
+        <a href="{% url 'operator-campaign-list' %}">Campaigns</a>
+        <a href="{% url 'operator-post-list' %}">Posts</a>
+        <a href="{% url 'operator-social-account-list' %}">Connections</a>
+      </nav>
+      <div class="user-menu">
+        <span>{{ request.user.username }}</span>
+        <form method="post" action="{% url 'operator-logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="button-ghost">Sign out</button>
+        </form>
+      </div>
+    </header>
+    <main class="page-shell">
+      {% if messages %}
+        <div class="message-stack">
+          {% for message in messages %}
+            <div class="notice notice-{{ message.tags }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

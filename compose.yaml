@@ -1,0 +1,76 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pulsea}
+      POSTGRES_USER: ${POSTGRES_USER:-pulsea}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pulsea-local}
+    ports:
+      - "${POSTGRES_EXPOSE_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pulsea} -d ${POSTGRES_DB:-pulsea}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_EXPOSE_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "${WEB_EXPOSE_PORT:-8000}:8000"
+    volumes:
+      - .:/app
+      - private_media:/app/media-private
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: celery -A config worker --loglevel=INFO
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - .:/app
+      - private_media:/app/media-private
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  beat:
+    build: .
+    command: celery -A config beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  private_media:

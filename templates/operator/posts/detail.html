@@ -1,0 +1,88 @@
+{% extends "operator/base.html" %}
+
+{% block title %}{{ post.title }} | Pulsea Operator{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <div>
+      <p class="eyebrow">Post delivery</p>
+      <h1>{{ post.title }}</h1>
+      <p class="muted">{{ post.client.name }} | <span class="badge {{ post_badge_class }}">{{ post.get_status_display }}</span></p>
+    </div>
+    {% if has_failed_targets %}
+      <form method="post" action="{% url 'operator-post-retry' pk=post.pk %}">
+        {% csrf_token %}
+        <button type="submit">Retry failed targets</button>
+      </form>
+    {% endif %}
+  </section>
+  <section class="panel">
+    <div class="detail-grid">
+      {% if post.campaign %}<div><span class="detail-label">Campaign</span><strong>{{ post.campaign.name }}</strong></div>{% endif %}
+      {% if post.scheduled_at %}<div><span class="detail-label">Scheduled</span><strong>{{ post.scheduled_at }}</strong></div>{% endif %}
+      {% if post.published_at %}<div><span class="detail-label">Published</span><strong>{{ post.published_at }}</strong></div>{% endif %}
+    </div>
+    {% if post.body %}<div class="content-preview">{{ post.body }}</div>{% endif %}
+  </section>
+  {% if post.media_attachments.all %}
+    <section class="panel">
+      <div class="section-heading">
+        <div><h2>Attached media</h2><p class="muted">Assets included with this post.</p></div>
+      </div>
+      <div class="media-grid">
+        {% for item in media_previews %}
+          <article class="media-card">
+            <div class="media-thumb {% if not item.preview_url %}media-thumb-empty{% endif %}">
+              {% if item.preview_url and item.media.media_type == "IMAGE" %}
+                <img src="{{ item.preview_url }}" alt="{{ item.filename }}">
+              {% elif item.preview_url and item.media.media_type == "VIDEO" %}
+                <video controls preload="metadata">
+                  <source src="{{ item.preview_url }}">
+                </video>
+              {% else %}
+                <span>{{ item.media.get_media_type_display }}</span>
+              {% endif %}
+            </div>
+            <div>
+              <strong>{{ item.filename }}</strong>
+              <p class="muted">{{ item.media.get_media_type_display }} · {{ item.media.size_bytes|filesizeformat }}</p>
+              {% if item.media.media_type == "VIDEO" %}
+                <p class="muted">Instagram publishes single videos as Reels and may need a few minutes to process them.</p>
+                {% if item.preview_url %}<a href="{{ item.preview_url }}" target="_blank" rel="noopener">Open video file</a>{% endif %}
+              {% endif %}
+              {% if item.is_missing %}<p class="error-copy">Preview unavailable. Reupload if this older asset fails.</p>{% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+  <section class="panel">
+    <div class="section-heading"><div><h2>Delivery targets</h2><p class="muted">Each channel reports its own result.</p></div></div>
+    <div class="target-grid">
+      {% for card in target_cards %}
+        <article class="target-card target-card-{{ card.target.status|lower }}">
+          <div class="target-card-head">
+            <div>
+              <h3>{{ card.target.get_platform_display }}</h3>
+              <p class="muted">{{ card.target.social_account.account_name }}</p>
+            </div>
+            <span class="badge {{ card.badge_class }}">{{ card.target.get_status_display }}</span>
+          </div>
+          <p class="{% if card.target.error_message %}error-copy{% else %}muted{% endif %}">{{ card.note }}</p>
+          <div class="target-meta">
+            {% if card.target.published_at %}<span>Published {{ card.target.published_at }}</span>{% endif %}
+            {% if card.target.retry_count %}<span>{{ card.target.retry_count }} retries</span>{% endif %}
+          </div>
+          {% if card.target.platform_url %}
+            <a class="button button-small" href="{{ card.target.platform_url }}" target="_blank" rel="noopener">{{ card.action_label }}</a>
+          {% elif card.target.status == "PUBLISHING" or card.target.status == "PENDING" %}
+            <span class="muted">No live link yet.</span>
+          {% endif %}
+        </article>
+      {% empty %}
+        <div class="empty-state"><h2>No delivery targets selected.</h2></div>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

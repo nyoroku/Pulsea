@@ -1,0 +1,32 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pulsea Client Login</title>
+    <link rel="stylesheet" href="{% static 'css/pulsea.css' %}">
+  </head>
+  <body class="auth-page">
+    <main class="auth-shell single-card">
+      <section class="auth-card">
+        <a class="brand" href="{% url 'home' %}">
+          <span class="brand-mark">P</span>
+          <span>Pulsea</span>
+        </a>
+        <p class="eyebrow">Client portal</p>
+        <h1>Welcome back</h1>
+        <p class="muted">Sign in to review your content workspace.</p>
+        <form method="post" class="stack-form">
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button type="submit">Sign in to portal</button>
+        </form>
+        <p class="auth-footnote">
+          Pulsea operator?
+          <a href="{% url 'operator-login' %}">Operator sign in</a>
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

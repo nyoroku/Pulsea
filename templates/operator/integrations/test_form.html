@@ -1,0 +1,8 @@
+{% extends "operator/base.html" %}
+
+{% block title %}Add Test Connection | Pulsea Operator{% endblock %}
+
+{% block content %}
+  <section class="page-heading compact"><div><p class="eyebrow">Connections</p><h1>Add test connection</h1><p class="muted">Create a fake delivery channel for local workflow testing. No external platform will be contacted.</p></div></section>
+  <section class="panel form-panel"><form method="post" class="stack-form">{% csrf_token %}{{ form.as_p }}<div class="action-bar"><button type="submit">Add test connection</button><a class="button-link" href="{% url 'operator-social-account-list' %}">Cancel</a></div></form></section>
+{% endblock %}
