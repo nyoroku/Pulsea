@@ -1,5 +1,6 @@
 .git
 .github
+.env
 .pytest_cache
 .ruff_cache
 .venv
@@ -7,4 +8,6 @@ __pycache__
 *.pyc
 db.sqlite3
 media-private
-
+staticfiles
+*.err.log
+*.out.log
