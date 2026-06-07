@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+import dj_database_url
+
 BASE_DIR = Path(__file__).resolve().parents[2]
 
 
@@ -45,6 +47,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "config.middleware.RequestIdMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -72,16 +75,26 @@ TEMPLATES = [
 ]
 WSGI_APPLICATION = "config.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("POSTGRES_DB", "pulsea"),
-        "USER": env("POSTGRES_USER", "pulsea"),
-        "PASSWORD": env("POSTGRES_PASSWORD", "pulsea-local"),
-        "HOST": env("POSTGRES_HOST", "localhost"),
-        "PORT": env("POSTGRES_PORT", "5432"),
+DATABASE_URL = env("DATABASE_URL")
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=env_bool("DATABASE_SSL_REQUIRE", False),
+        )
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": env("POSTGRES_DB", "pulsea"),
+            "USER": env("POSTGRES_USER", "pulsea"),
+            "PASSWORD": env("POSTGRES_PASSWORD", "pulsea-local"),
+            "HOST": env("POSTGRES_HOST", "localhost"),
+            "PORT": env("POSTGRES_PORT", "5432"),
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -98,6 +111,10 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "/portal/login/"
 
