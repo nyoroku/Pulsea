@@ -3,34 +3,77 @@
 {% block title %}Posts | Pulsea Operator{% endblock %}
 
 {% block content %}
-  <section class="page-heading"><div><p class="eyebrow">Publishing</p><h1>Posts</h1><p class="muted">Compose, schedule, and inspect delivery across every selected channel.</p></div><a class="button" href="{% url 'operator-post-compose' %}">Compose post</a></section>
-  <section class="panel">
-  <form method="get" class="filter-bar">
-    <label>
-      Client
-      <select name="client">
-        <option value="">All clients</option>
-        {% for client_record in clients %}
-          <option value="{{ client_record.pk }}"
-                  {% if selected_client == client_record.pk|stringformat:"s" %}selected{% endif %}>
-            {{ client_record.name }}
-          </option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>
-      Status
-      <select name="status">
-        <option value="">All statuses</option>
-        {% for value, label in post_statuses %}
-          <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
-            {{ label }}
-          </option>
-        {% endfor %}
-      </select>
-    </label>
-    <button type="submit">Filter</button>
-  </form>
-  {% if posts %}<div class="table-wrap"><table><thead><tr><th>Post</th><th>Client</th><th>Status</th><th></th></tr></thead><tbody>{% for post in posts %}<tr><td><strong>{{ post.title }}</strong></td><td>{{ post.client.name }}</td><td><span class="badge {% if post.status == 'PUBLISHED' %}badge-good{% elif post.status == 'FAILED' %}badge-bad{% elif post.status == 'QUEUED' or post.status == 'PUBLISHING' or post.status == 'SCHEDULED' %}badge-warn{% else %}badge-muted{% endif %}">{{ post.get_status_display }}</span></td><td class="table-action"><a href="{% url 'operator-post-detail' pk=post.pk %}">View post</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state"><h2>No posts yet</h2><p>Connect a social account, then compose your first post.</p></div>{% endif %}
+  <section class="hero-panel">
+    <div>
+      <p class="eyebrow">Publishing command</p>
+      <h1>Posts</h1>
+      <p class="muted">Standalone ideas, campaign content, scheduled work, and live delivery in one place.</p>
+    </div>
+    <div class="action-bar">
+      <a class="button-secondary" href="{% url 'operator-post-calendar' %}">Open calendar</a>
+      <a class="button" href="{% url 'operator-post-compose' %}">Compose post</a>
+    </div>
   </section>
+
+  <section class="panel glass-panel">
+    <form method="get" class="filter-bar enhanced-filter">
+      <label>
+        Search
+        <input type="search" name="q" value="{{ query }}" placeholder="Title, copy, client, or campaign">
+      </label>
+      <label>
+        Client
+        <select name="client">
+          <option value="">All clients</option>
+          {% for client_record in clients %}
+            <option value="{{ client_record.pk }}" {% if selected_client == client_record.pk|stringformat:"s" %}selected{% endif %}>{{ client_record.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Status
+        <select name="status">
+          <option value="">All statuses</option>
+          {% for value, label in post_statuses %}
+            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit">Filter</button>
+    </form>
+  </section>
+
+  {% if post_rows %}
+    <section class="post-list">
+      {% for row in post_rows %}
+        <article class="post-card">
+          <div class="post-card-main">
+            <span class="badge {{ row.badge_class }}">{{ row.post.get_status_display }}</span>
+            <h2><a href="{% url 'operator-post-detail' pk=row.post.pk %}">{{ row.post.title }}</a></h2>
+            <p class="muted">
+              {{ row.post.client.name }}
+              {% if row.post.campaign %} / {{ row.post.campaign.name }}{% else %} / No campaign{% endif %}
+              / {{ row.calendar_date }}
+            </p>
+          </div>
+          <div class="platform-chip-row">
+            {% for target in row.targets %}
+              <span class="platform-chip">
+                <span class="platform-icon {{ target.meta.class }}">{{ target.meta.icon }}</span>
+                {{ target.meta.label }}
+              </span>
+            {% empty %}
+              <span class="muted">No platform targets</span>
+            {% endfor %}
+          </div>
+          <a class="button-secondary" href="{% url 'operator-post-detail' pk=row.post.pk %}">Inspect</a>
+        </article>
+      {% endfor %}
+    </section>
+  {% else %}
+    <div class="empty-state luxe-empty">
+      <h2>No posts found</h2>
+      <p>Compose a standalone post or add one from a campaign workspace.</p>
+    </div>
+  {% endif %}
 {% endblock %}

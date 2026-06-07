@@ -1,22 +1,127 @@
 {% extends "operator/base.html" %}
 
-{% block title %}{{ client_record.name }} | Pulsea Operator{% endblock %}
+{% block title %}{{ client_record.name }} Workspace | Pulsea Operator{% endblock %}
 
 {% block content %}
-  <section class="page-heading">
-    <div><p class="eyebrow">Client profile</p><h1>{{ client_record.name }}</h1><p class="muted">{{ client_record.get_industry_display }} · <span class="badge {% if client_record.is_active %}badge-good{% else %}badge-muted{% endif %}">{% if client_record.is_active %}Active{% else %}Inactive{% endif %}</span></p></div>
-    <div class="action-bar"><a class="button" href="{% url 'operator-client-edit' slug=client_record.slug %}">Edit client</a><a class="button button-secondary" href="{% url 'operator-social-account-list' %}">Manage connections</a></div>
-  </section>
-  <section class="panel">
-    <div class="section-heading"><div><h2>Client setup</h2><p class="muted">Connect social accounts before composing publishable posts.</p></div></div>
-    <div class="detail-grid"><div><span class="detail-label">Slug</span><strong>{{ client_record.slug }}</strong></div><div><span class="detail-label">Industry</span><strong>{{ client_record.get_industry_display }}</strong></div></div>
-  </section>
-  <section class="panel danger-zone">
-    <h2>Account controls</h2>
-    <p class="muted">Use these actions only when the client relationship changes.</p>
-    <div class="action-bar">
-      {% if client_record.is_active %}<form method="post" action="{% url 'operator-client-deactivate' slug=client_record.slug %}">{% csrf_token %}<button class="button-secondary" type="submit">Deactivate</button></form>{% endif %}
-      <form method="post" action="{% url 'operator-client-delete' slug=client_record.slug %}">{% csrf_token %}<button class="button-danger" type="submit">Soft-delete</button></form>
+  <section class="workspace-hero">
+    <div>
+      <p class="eyebrow">Client workspace</p>
+      <h1>{{ client_record.name }}</h1>
+      <p class="muted">
+        {{ client_record.get_industry_display }} workspace for campaigns, posts, and connected platforms.
+      </p>
     </div>
+    <div class="action-bar">
+      <a class="button" href="{% url 'operator-post-compose' %}?client={{ client_record.pk }}">Create post</a>
+      <a class="button-secondary" href="{% url 'operator-campaign-create' %}">New campaign</a>
+      <a class="button-secondary" href="{% url 'operator-client-edit' slug=client_record.slug %}">Edit client</a>
+    </div>
+  </section>
+
+  <section class="metric-grid">
+    <article class="metric-card"><span>Posts</span><strong>{{ stats.posts }}</strong></article>
+    <article class="metric-card"><span>Scheduled</span><strong>{{ stats.scheduled }}</strong></article>
+    <article class="metric-card"><span>Campaigns</span><strong>{{ stats.campaigns }}</strong></article>
+    <article class="metric-card"><span>Platforms</span><strong>{{ stats.connections }}</strong></article>
+  </section>
+
+  <section class="workspace-layout">
+    <div class="workspace-main">
+      <section class="panel glass-panel">
+        <div class="section-heading">
+          <div>
+            <h2>Recent posts</h2>
+            <p class="muted">Standalone posts and campaign posts live together here.</p>
+          </div>
+          <a class="button-secondary" href="{% url 'operator-post-list' %}?client={{ client_record.pk }}">View all</a>
+        </div>
+        {% if recent_posts %}
+          <div class="feed-list">
+            {% for post in recent_posts %}
+              <a class="feed-item" href="{% url 'operator-post-detail' pk=post.pk %}">
+                <span class="status-dot status-{{ post.status|lower }}"></span>
+                <div>
+                  <strong>{{ post.title }}</strong>
+                  <p class="muted">
+                    {{ post.get_status_display }}
+                    {% if post.campaign %} / {{ post.campaign.name }}{% else %} / No campaign{% endif %}
+                  </p>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state"><h2>No posts yet</h2><p>Start with a standalone post or add one from a campaign.</p></div>
+        {% endif %}
+      </section>
+
+      <section class="panel glass-panel">
+        <div class="section-heading">
+          <div>
+            <h2>Campaigns</h2>
+            <p class="muted">Add posts from a campaign when the work needs a launch or theme.</p>
+          </div>
+        </div>
+        {% if campaigns %}
+          <div class="campaign-strip">
+            {% for campaign in campaigns %}
+              <article class="campaign-card">
+                <span class="color-dot" style="background: {{ campaign.color }}"></span>
+                <h3>{{ campaign.name }}</h3>
+                <p class="muted">{{ campaign.post_count }} post{{ campaign.post_count|pluralize }}</p>
+                <div class="action-bar">
+                  <a href="{% url 'operator-campaign-detail' pk=campaign.pk %}">Open</a>
+                  <a href="{% url 'operator-post-compose' %}?campaign={{ campaign.pk }}">Add post</a>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state"><h2>No campaigns yet</h2><p>You can still publish standalone posts without a campaign.</p></div>
+        {% endif %}
+      </section>
+    </div>
+
+    <aside class="workspace-side">
+      <section class="panel glass-panel">
+        <div class="section-heading">
+          <div>
+            <h2>Platforms</h2>
+            <p class="muted">Connected accounts for this client.</p>
+          </div>
+          <a class="button-secondary" href="{% url 'operator-social-account-list' %}">Manage</a>
+        </div>
+        {% if social_accounts %}
+          <div class="platform-stack">
+            {% for item in social_accounts %}
+              <div class="platform-row">
+                <span class="platform-icon {{ item.meta.class }}">{{ item.meta.icon }}</span>
+                <div>
+                  <strong>{{ item.account.account_name }}</strong>
+                  <p class="muted">{{ item.meta.label }} / {{ item.account.get_connection_health_display }}</p>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state compact"><h2>No platforms</h2><p>Connect Meta, Instagram, or Pinterest before live publishing.</p></div>
+        {% endif %}
+      </section>
+
+      <section class="panel danger-zone">
+        <h2>Account controls</h2>
+        <p class="muted">Use these only when the client relationship changes.</p>
+        <div class="action-bar">
+          {% if client_record.is_active %}
+            <form method="post" action="{% url 'operator-client-deactivate' slug=client_record.slug %}">
+              {% csrf_token %}<button class="button-secondary" type="submit">Deactivate</button>
+            </form>
+          {% endif %}
+          <form method="post" action="{% url 'operator-client-delete' slug=client_record.slug %}">
+            {% csrf_token %}<button class="button-danger" type="submit">Soft-delete</button>
+          </form>
+        </div>
+      </section>
+    </aside>
   </section>
 {% endblock %}

@@ -1,0 +1,61 @@
+{% extends "operator/base.html" %}
+
+{% block title %}Content Calendar | Pulsea Operator{% endblock %}
+
+{% block content %}
+  <section class="hero-panel">
+    <div>
+      <p class="eyebrow">Content calendar</p>
+      <h1>{{ month_label }}</h1>
+      <p class="muted">See scheduled, published, and newly drafted posts by day.</p>
+    </div>
+    <div class="action-bar">
+      <a class="button-secondary" href="{% url 'operator-post-calendar' %}?year={{ previous_month.year }}&month={{ previous_month.month }}{% if selected_client %}&client={{ selected_client }}{% endif %}">Previous</a>
+      <a class="button-secondary" href="{% url 'operator-post-calendar' %}?year={{ next_month.year }}&month={{ next_month.month }}{% if selected_client %}&client={{ selected_client }}{% endif %}">Next</a>
+      <a class="button" href="{% url 'operator-post-compose' %}{% if selected_client %}?client={{ selected_client }}{% endif %}">Create post</a>
+    </div>
+  </section>
+
+  <section class="panel glass-panel">
+    <form method="get" class="filter-bar calendar-filter">
+      <input type="hidden" name="year" value="{{ month_start.year }}">
+      <input type="hidden" name="month" value="{{ month_start.month }}">
+      <label>
+        Client
+        <select name="client">
+          <option value="">All clients</option>
+          {% for client_record in clients %}
+            <option value="{{ client_record.pk }}" {% if selected_client == client_record.pk|stringformat:"s" %}selected{% endif %}>{{ client_record.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit">Filter calendar</button>
+    </form>
+  </section>
+
+  <section class="calendar-shell">
+    <div class="calendar-weekdays">
+      {% for label in weekday_labels %}<span>{{ label }}</span>{% endfor %}
+    </div>
+    <div class="calendar-grid">
+      {% for week in calendar_weeks %}
+        {% for day in week %}
+          <article class="calendar-day {% if not day.in_month %}calendar-day-muted{% endif %} {% if day.date == today %}calendar-today{% endif %}">
+            <header>
+              <strong>{{ day.date.day }}</strong>
+            </header>
+            <div class="calendar-posts">
+              {% for row in day.posts %}
+                <a class="calendar-post" href="{% url 'operator-post-detail' pk=row.post.pk %}">
+                  <span class="status-dot status-{{ row.post.status|lower }}"></span>
+                  <span>{{ row.post.title }}</span>
+                  <small>{{ row.post.client.name }}</small>
+                </a>
+              {% endfor %}
+            </div>
+          </article>
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

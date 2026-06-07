@@ -7,7 +7,11 @@
     <div>
       <p class="eyebrow">Post delivery</p>
       <h1>{{ post.title }}</h1>
-      <p class="muted">{{ post.client.name }} | <span class="badge {{ post_badge_class }}">{{ post.get_status_display }}</span></p>
+      <p class="muted">
+        {{ post.client.name }}
+        {% if post.campaign %} / {{ post.campaign.name }}{% else %} / No campaign{% endif %}
+        / <span class="badge {{ post_badge_class }}">{{ post.get_status_display }}</span>
+      </p>
     </div>
     {% if has_failed_targets %}
       <form method="post" action="{% url 'operator-post-retry' pk=post.pk %}">
@@ -45,7 +49,7 @@
             </div>
             <div>
               <strong>{{ item.filename }}</strong>
-              <p class="muted">{{ item.media.get_media_type_display }} · {{ item.media.size_bytes|filesizeformat }}</p>
+              <p class="muted">{{ item.media.get_media_type_display }} / {{ item.media.size_bytes|filesizeformat }}</p>
               {% if item.media.media_type == "VIDEO" %}
                 <p class="muted">Instagram publishes single videos as Reels and may need a few minutes to process them.</p>
                 {% if item.preview_url %}<a href="{{ item.preview_url }}" target="_blank" rel="noopener">Open video file</a>{% endif %}
@@ -64,7 +68,10 @@
         <article class="target-card target-card-{{ card.target.status|lower }}">
           <div class="target-card-head">
             <div>
-              <h3>{{ card.target.get_platform_display }}</h3>
+              <div class="platform-heading">
+                <span class="platform-icon {{ card.meta.class }}">{{ card.meta.icon }}</span>
+                <h3>{{ card.meta.label }}</h3>
+              </div>
               <p class="muted">{{ card.target.social_account.account_name }}</p>
             </div>
             <span class="badge {{ card.badge_class }}">{{ card.target.get_status_display }}</span>

@@ -3,14 +3,72 @@
 {% block title %}Compose Post | Pulsea Operator{% endblock %}
 
 {% block content %}
-  <section class="page-heading compact"><div><p class="eyebrow">Publishing</p><h1>Compose post</h1><p class="muted">Write once, choose the right accounts, and decide when it should go live.</p></div></section>
-  <section class="panel form-panel wide"><form method="post" enctype="multipart/form-data" class="stack-form">{% csrf_token %}{{ form.as_p }}<div class="notice"><strong>Media delivery</strong><span>PNG, WebP, and wide/tall images are automatically converted into Instagram-safe JPEGs. Facebook supports multiple images or one video, but not mixed image/video posts yet. Instagram supports MP4/MOV videos as Reels and up to 10 carousel items.</span></div><div class="action-bar"><button class="button-secondary" type="submit" name="action" value="draft">Save draft</button><button type="submit" name="action" value="schedule">Schedule</button><button type="submit" name="action" value="publish_now">Publish now</button></div></form></section>
+  <section class="workspace-hero compose-hero">
+    <div>
+      <p class="eyebrow">Composer</p>
+      <h1>Build a post</h1>
+      <p class="muted">
+        Create standalone content or attach it to a campaign. Choose platforms only after the client is right.
+      </p>
+    </div>
+    {% if prefill_client or prefill_campaign %}
+      <div class="prefill-card">
+        <span>Starting from</span>
+        <strong>
+          {% if prefill_campaign %}{{ prefill_campaign.name }}{% else %}{{ prefill_client.name }}{% endif %}
+        </strong>
+      </div>
+    {% endif %}
+  </section>
+
+  <form method="post" enctype="multipart/form-data" class="compose-layout">
+    {% csrf_token %}
+    <section class="panel glass-panel compose-panel">
+      <p class="eyebrow">Step 01</p>
+      <h2>Workspace and campaign</h2>
+      <p class="muted">Campaign is optional. Use it only when this post belongs to a launch, offer, or content theme.</p>
+      {{ form.client.as_field_group }}
+      {{ form.campaign.as_field_group }}
+    </section>
+
+    <section class="panel glass-panel compose-panel">
+      <p class="eyebrow">Step 02</p>
+      <h2>Content</h2>
+      {{ form.title.as_field_group }}
+      {{ form.body.as_field_group }}
+      {{ form.scheduled_at.as_field_group }}
+    </section>
+
+    <section class="panel glass-panel compose-panel">
+      <p class="eyebrow">Step 03</p>
+      <h2>Platforms and media</h2>
+      <p class="muted">Pick connected accounts for this client, then add media if the selected platform needs it.</p>
+      {{ form.social_accounts.as_field_group }}
+      {{ form.existing_media.as_field_group }}
+      {{ form.media_uploads.as_field_group }}
+      <div class="notice">
+        <strong>Media delivery</strong>
+        <span>Instagram images are normalized automatically. Facebook supports multiple images or one video. Pinterest currently supports one image.</span>
+      </div>
+    </section>
+
+    {% if form.non_field_errors %}
+      <section class="panel">{{ form.non_field_errors }}</section>
+    {% endif %}
+
+    <section class="compose-actions">
+      <button class="button-secondary" type="submit" name="action" value="draft">Save draft</button>
+      <button type="submit" name="action" value="schedule">Schedule</button>
+      <button type="submit" name="action" value="publish_now">Publish now</button>
+    </section>
+  </form>
+
   <script>
     (() => {
       const firstInput = document.getElementById("id_media_uploads");
       if (!firstInput) return;
 
-      const field = firstInput.closest("p");
+      const field = firstInput.closest("div");
       const uploadList = document.createElement("div");
       const addButton = document.createElement("button");
 
@@ -21,7 +79,7 @@
       addButton.type = "button";
       addButton.className = "button-secondary media-upload-add";
       addButton.textContent = "Add another media file";
-      field.insertBefore(addButton, field.querySelector(".helptext"));
+      field.appendChild(addButton);
 
       addButton.addEventListener("click", () => {
         const input = document.createElement("input");

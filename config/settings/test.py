@@ -11,3 +11,6 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 PUBLISHING_ADAPTER_MODE = "fake"
+STORAGES["staticfiles"] = {  # noqa: F405
+    "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+}

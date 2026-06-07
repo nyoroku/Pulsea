@@ -1,13 +1,19 @@
+import calendar
+from datetime import timedelta
 from pathlib import PurePosixPath
 
 from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from campaigns.models import Campaign
 from clients.models import Client
 from integrations.models import Platform
+from integrations.presentation import platform_meta
 from media.image_processing import normalize_instagram_feed_image_upload
 from media.models import MediaSource, MediaType, PostMedia
 from media.services import upload_media
@@ -27,26 +33,39 @@ from .tasks import dispatch_post, manual_retry_failed_targets
 
 @staff_member_required(login_url="operator-login")
 def post_list(request):
-    posts = Post.objects.select_related("client", "campaign").prefetch_related("targets")
+    posts = Post.objects.select_related("client", "campaign").prefetch_related(
+        "targets",
+        "targets__social_account",
+    )
     selected_status = request.GET.get("status", "")
     selected_client = request.GET.get("client", "")
+    query = request.GET.get("q", "").strip()
     if selected_status:
         posts = posts.filter(status=selected_status)
     if selected_client:
         posts = posts.filter(client_id=selected_client)
+    if query:
+        posts = posts.filter(
+            Q(title__icontains=query)
+            | Q(body__icontains=query)
+            | Q(client__name__icontains=query)
+            | Q(campaign__name__icontains=query)
+        )
     context = {
-        "posts": posts,
+        "post_rows": [_post_row(post) for post in posts],
         "clients": Client.objects.filter(deleted_at__isnull=True),
         "post_statuses": PostStatus.choices,
         "selected_client": selected_client,
         "selected_status": selected_status,
+        "query": query,
     }
     return render(request, "operator/posts/list.html", context)
 
 
 @staff_member_required(login_url="operator-login")
 def post_compose(request):
-    form = PostComposerForm(request.POST or None, request.FILES or None)
+    initial = _compose_initial(request)
+    form = PostComposerForm(request.POST or None, request.FILES or None, initial=initial)
     if request.method == "POST" and form.is_valid():
         action = request.POST.get("action", "draft")
         if action == "schedule" and not form.cleaned_data["scheduled_at"]:
@@ -105,7 +124,80 @@ def post_compose(request):
                     storage.delete(uploaded_media.file_key)
                 raise
             return redirect("operator-post-detail", pk=post.pk)
-    return render(request, "operator/posts/compose.html", {"form": form})
+    return render(
+        request,
+        "operator/posts/compose.html",
+        {
+            "form": form,
+            "prefill_client": initial.get("client"),
+            "prefill_campaign": initial.get("campaign"),
+        },
+    )
+
+
+@staff_member_required(login_url="operator-login")
+def post_calendar(request):
+    today = timezone.localdate()
+    selected_client = request.GET.get("client", "")
+    try:
+        year = int(request.GET.get("year", today.year))
+        month = int(request.GET.get("month", today.month))
+        month_start = today.replace(year=year, month=month, day=1)
+    except ValueError:
+        year = today.year
+        month = today.month
+        month_start = today.replace(day=1)
+    month_end = _next_month(month_start)
+
+    posts = Post.objects.select_related("client", "campaign").prefetch_related(
+        "targets",
+        "targets__social_account",
+    )
+    posts = posts.filter(
+        Q(scheduled_at__date__gte=month_start, scheduled_at__date__lt=month_end)
+        | Q(published_at__date__gte=month_start, published_at__date__lt=month_end)
+        | Q(created_at__date__gte=month_start, created_at__date__lt=month_end)
+    )
+    if selected_client:
+        posts = posts.filter(client_id=selected_client)
+
+    posts_by_day = {}
+    for post in posts:
+        day = _calendar_post_date(post)
+        if month_start <= day < month_end:
+            posts_by_day.setdefault(day.day, []).append(_post_row(post))
+
+    previous_month = month_start - timedelta(days=1)
+    next_month = month_end
+    context = {
+        "calendar_weeks": _calendar_weeks(month_start, posts_by_day),
+        "month_start": month_start,
+        "month_label": month_start.strftime("%B %Y"),
+        "weekday_labels": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+        "previous_month": previous_month,
+        "next_month": next_month,
+        "clients": Client.objects.filter(deleted_at__isnull=True),
+        "selected_client": selected_client,
+        "today": today,
+    }
+    return render(request, "operator/posts/calendar.html", context)
+
+
+def _compose_initial(request) -> dict:
+    initial = {}
+    client_id = request.GET.get("client")
+    campaign_id = request.GET.get("campaign")
+    if campaign_id:
+        campaign = Campaign.objects.filter(pk=campaign_id).select_related("client").first()
+        if campaign:
+            initial["campaign"] = campaign
+            initial["client"] = campaign.client
+            return initial
+    if client_id:
+        client = Client.objects.filter(pk=client_id, deleted_at__isnull=True).first()
+        if client:
+            initial["client"] = client
+    return initial
 
 
 def _validate_publish_readiness(form: PostComposerForm) -> bool:
@@ -165,6 +257,57 @@ def _validate_publish_readiness(form: PostComposerForm) -> bool:
         return False
 
     return True
+
+
+def _post_row(post: Post) -> dict:
+    targets = [
+        {
+            "target": target,
+            "meta": platform_meta(target.platform),
+            "badge_class": _target_badge_class(target.status),
+        }
+        for target in post.targets.all()
+    ]
+    return {
+        "post": post,
+        "targets": targets,
+        "badge_class": _post_badge_class(post.status),
+        "calendar_date": _calendar_post_date(post),
+    }
+
+
+def _calendar_post_date(post: Post):
+    timestamp = post.scheduled_at or post.published_at or post.created_at
+    return timezone.localtime(timestamp).date()
+
+
+def _next_month(month_start):
+    if month_start.month == 12:
+        return month_start.replace(year=month_start.year + 1, month=1)
+    return month_start.replace(month=month_start.month + 1)
+
+
+def _calendar_weeks(month_start, posts_by_day: dict[int, list[dict]]) -> list[list[dict]]:
+    weeks = []
+    for week in calendar.Calendar(firstweekday=0).monthdatescalendar(
+        month_start.year,
+        month_start.month,
+    ):
+        weeks.append(
+            [
+                {
+                    "date": day,
+                    "in_month": day.month == month_start.month,
+                    "posts": (
+                        posts_by_day.get(day.day, [])
+                        if day.month == month_start.month
+                        else []
+                    ),
+                }
+                for day in week
+            ]
+        )
+    return weeks
 
 
 def _prepare_media_uploads_for_targets(form: PostComposerForm):
@@ -243,11 +386,13 @@ def _media_previews(post: Post) -> list[dict]:
 
 
 def _target_card(target: PostTarget) -> dict:
+    meta = platform_meta(target.platform)
     return {
         "target": target,
+        "meta": meta,
         "badge_class": _target_badge_class(target.status),
         "note": _target_note(target),
-        "action_label": f"Open on {target.get_platform_display()}" if target.platform_url else "",
+        "action_label": f"Open on {meta['label']}" if target.platform_url else "",
     }
 
 

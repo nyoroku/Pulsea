@@ -1,35 +1,57 @@
 {% extends "operator/base.html" %}
 
-{% block title %}Clients | Pulsea Operator{% endblock %}
+{% block title %}Client Workspaces | Pulsea Operator{% endblock %}
 
 {% block content %}
-  <section class="page-heading">
+  <section class="hero-panel">
     <div>
-      <p class="eyebrow">Workspace</p>
-      <h1>Clients</h1>
-      <p class="muted">Manage the brands, teams, and accounts your agency works with.</p>
+      <p class="eyebrow">Agency command</p>
+      <h1>Client workspaces</h1>
+      <p class="muted">Search, open, and operate each brand from its own focused publishing workspace.</p>
     </div>
     <a class="button" href="{% url 'operator-client-create' %}">Add client</a>
   </section>
-  <section class="panel">
-    {% if clients %}
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Client</th><th>Industry</th><th>Status</th><th></th></tr></thead>
-          <tbody>
-            {% for client_record in clients %}
-              <tr>
-                <td><strong>{{ client_record.name }}</strong><br><span class="muted">{{ client_record.slug }}</span></td>
-                <td>{{ client_record.get_industry_display }}</td>
-                <td><span class="badge {% if client_record.is_active %}badge-good{% else %}badge-muted{% endif %}">{% if client_record.is_active %}Active{% else %}Inactive{% endif %}</span></td>
-                <td class="table-action"><a href="{% url 'operator-client-detail' slug=client_record.slug %}">View client</a></td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+
+  <section class="panel glass-panel">
+    <form method="get" class="search-bar">
+      <label for="client-search">Find a workspace</label>
+      <div class="search-row">
+        <input id="client-search" type="search" name="q" value="{{ query }}" placeholder="Search by client, slug, or industry">
+        <button type="submit">Search</button>
+        {% if query %}<a class="button-secondary" href="{% url 'operator-client-list' %}">Clear</a>{% endif %}
       </div>
-    {% else %}
-      <div class="empty-state"><h2>No clients yet</h2><p>Create your first client to start building campaigns and connecting social accounts.</p></div>
-    {% endif %}
+    </form>
   </section>
+
+  {% if clients %}
+    <section class="workspace-grid">
+      {% for client_record in clients %}
+        <article class="workspace-card">
+          <div class="workspace-card-top">
+            <div class="client-avatar">{{ client_record.name|first }}</div>
+            <span class="badge {% if client_record.is_active %}badge-good{% else %}badge-muted{% endif %}">
+              {% if client_record.is_active %}Active{% else %}Inactive{% endif %}
+            </span>
+          </div>
+          <p class="eyebrow">{{ client_record.get_industry_display }}</p>
+          <h2>{{ client_record.name }}</h2>
+          <p class="muted">{{ client_record.slug }}</p>
+          <div class="mini-stats">
+            <div><strong>{{ client_record.post_count }}</strong><span>Posts</span></div>
+            <div><strong>{{ client_record.campaign_count }}</strong><span>Campaigns</span></div>
+            <div><strong>{{ client_record.connection_count }}</strong><span>Channels</span></div>
+          </div>
+          <div class="action-bar">
+            <a class="button" href="{% url 'operator-client-detail' slug=client_record.slug %}">Open workspace</a>
+            <a class="button-secondary" href="{% url 'operator-post-compose' %}?client={{ client_record.pk }}">New post</a>
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  {% else %}
+    <div class="empty-state luxe-empty">
+      <h2>No matching workspaces</h2>
+      <p>Create a client or clear your search to return to the full workspace list.</p>
+    </div>
+  {% endif %}
 {% endblock %}

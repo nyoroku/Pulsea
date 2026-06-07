@@ -3,6 +3,63 @@
 {% block title %}{{ campaign.name }} | Pulsea Operator{% endblock %}
 
 {% block content %}
-  <section class="page-heading"><div><p class="eyebrow">Campaign</p><h1>{{ campaign.name }}</h1><p class="muted">{{ campaign.client.name }} · <span class="badge">{{ campaign.get_status_display }}</span></p></div><div class="action-bar"><a class="button" href="{% url 'operator-campaign-edit' pk=campaign.pk %}">Edit campaign</a>{% if campaign.status != "ARCHIVED" %}<form method="post" action="{% url 'operator-campaign-archive' pk=campaign.pk %}">{% csrf_token %}<button class="button-secondary" type="submit">Archive</button></form>{% endif %}</div></section>
-  <section class="panel"><h2>Campaign details</h2><div class="detail-grid"><div><span class="detail-label">Client</span><strong>{{ campaign.client.name }}</strong></div><div><span class="detail-label">Status</span><strong>{{ campaign.get_status_display }}</strong></div>{% if campaign.start_date %}<div><span class="detail-label">Starts</span><strong>{{ campaign.start_date }}</strong></div>{% endif %}{% if campaign.end_date %}<div><span class="detail-label">Ends</span><strong>{{ campaign.end_date }}</strong></div>{% endif %}</div>{% if campaign.description %}<p>{{ campaign.description }}</p>{% endif %}</section>
+  <section class="workspace-hero campaign-hero">
+    <div>
+      <p class="eyebrow">Campaign</p>
+      <h1>{{ campaign.name }}</h1>
+      <p class="muted">
+        <a href="{% url 'operator-client-detail' slug=campaign.client.slug %}">{{ campaign.client.name }}</a>
+        / <span class="badge">{{ campaign.get_status_display }}</span>
+        / {{ campaign.post_count }} post{{ campaign.post_count|pluralize }}
+      </p>
+    </div>
+    <div class="action-bar">
+      <a class="button" href="{% url 'operator-post-compose' %}?campaign={{ campaign.pk }}">Add post to campaign</a>
+      <a class="button-secondary" href="{% url 'operator-campaign-edit' pk=campaign.pk %}">Edit campaign</a>
+      {% if campaign.status != "ARCHIVED" %}
+        <form method="post" action="{% url 'operator-campaign-archive' pk=campaign.pk %}">
+          {% csrf_token %}<button class="button-secondary" type="submit">Archive</button>
+        </form>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="detail-grid">
+    <div><span class="detail-label">Client</span><strong>{{ campaign.client.name }}</strong></div>
+    <div><span class="detail-label">Status</span><strong>{{ campaign.get_status_display }}</strong></div>
+    {% if campaign.start_date %}<div><span class="detail-label">Starts</span><strong>{{ campaign.start_date }}</strong></div>{% endif %}
+    {% if campaign.end_date %}<div><span class="detail-label">Ends</span><strong>{{ campaign.end_date }}</strong></div>{% endif %}
+  </section>
+
+  {% if campaign.description %}
+    <section class="panel glass-panel">
+      <h2>Brief</h2>
+      <p>{{ campaign.description }}</p>
+    </section>
+  {% endif %}
+
+  <section class="panel glass-panel">
+    <div class="section-heading">
+      <div>
+        <h2>Campaign posts</h2>
+        <p class="muted">Every post attached to this campaign.</p>
+      </div>
+      <a class="button-secondary" href="{% url 'operator-post-compose' %}?campaign={{ campaign.pk }}">Add post</a>
+    </div>
+    {% if posts %}
+      <div class="feed-list">
+        {% for post in posts %}
+          <a class="feed-item" href="{% url 'operator-post-detail' pk=post.pk %}">
+            <span class="status-dot status-{{ post.status|lower }}"></span>
+            <div>
+              <strong>{{ post.title }}</strong>
+              <p class="muted">{{ post.get_status_display }}{% if post.scheduled_at %} / {{ post.scheduled_at }}{% endif %}</p>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state"><h2>No campaign posts yet</h2><p>Add a post from this campaign when you are ready to publish.</p></div>
+    {% endif %}
+  </section>
 {% endblock %}

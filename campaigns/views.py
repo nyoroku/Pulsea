@@ -1,4 +1,5 @@
 from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -23,8 +24,21 @@ def campaign_create(request):
 
 @staff_member_required(login_url="operator-login")
 def campaign_detail(request, pk):
-    campaign = get_object_or_404(Campaign.objects.select_related("client"), pk=pk)
-    return render(request, "operator/campaigns/detail.html", {"campaign": campaign})
+    campaign = get_object_or_404(
+        Campaign.objects.select_related("client").annotate(post_count=Count("posts")),
+        pk=pk,
+    )
+    posts = campaign.posts.select_related("client").prefetch_related("targets").order_by(
+        "-created_at"
+    )
+    return render(
+        request,
+        "operator/campaigns/detail.html",
+        {
+            "campaign": campaign,
+            "posts": posts,
+        },
+    )
 
 
 @staff_member_required(login_url="operator-login")

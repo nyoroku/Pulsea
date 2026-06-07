@@ -1,8 +1,13 @@
+from datetime import datetime
+
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from campaigns.models import Campaign, CampaignStatus
 from clients.models import Client, ClientIndustry
+from integrations.models import Platform, SocialAccount
+from publishing.models import Post, PostStatus
 
 
 @pytest.fixture
@@ -86,6 +91,50 @@ def test_client_deactivation_rejects_get(client, staff_user):
 
 
 @pytest.mark.django_db
+def test_client_list_is_searchable(client, staff_user):
+    client.force_login(staff_user)
+    Client.objects.create(name="Lake House", slug="lake-house", industry=ClientIndustry.HOSPITALITY)
+    Client.objects.create(
+        name="City Clinic", slug="city-clinic", industry=ClientIndustry.HEALTHCARE
+    )
+
+    response = client.get(reverse("operator-client-list"), {"q": "lake"})
+
+    assert response.status_code == 200
+    assert b"Lake House" in response.content
+    assert b"City Clinic" not in response.content
+
+
+@pytest.mark.django_db
+def test_client_workspace_shows_platforms_and_recent_posts(client, staff_user):
+    client.force_login(staff_user)
+    client_record = Client.objects.create(
+        name="Workspace Client",
+        slug="workspace-client",
+        industry=ClientIndustry.RETAIL,
+    )
+    account = SocialAccount.objects.create(
+        client=client_record,
+        platform=Platform.INSTAGRAM,
+        account_name="Workspace Instagram",
+        platform_account_id="ig-123",
+    )
+    post = Post.objects.create(
+        client=client_record,
+        title="Workspace Post",
+        status=PostStatus.DRAFT,
+    )
+    post.targets.create(social_account=account, platform=Platform.INSTAGRAM)
+
+    response = client.get(reverse("operator-client-detail", args=[client_record.slug]))
+
+    assert response.status_code == 200
+    assert b"Client workspace" in response.content
+    assert b"Workspace Instagram" in response.content
+    assert b"Workspace Post" in response.content
+
+
+@pytest.mark.django_db
 def test_staff_can_create_edit_and_archive_campaign(client, staff_user):
     client.force_login(staff_user)
     client_record = Client.objects.create(
@@ -132,6 +181,48 @@ def test_staff_can_create_edit_and_archive_campaign(client, staff_user):
 
     assert archive_response.status_code == 302
     assert campaign.status == CampaignStatus.ARCHIVED
+
+
+@pytest.mark.django_db
+def test_campaign_detail_links_to_prefilled_post_composer(client, staff_user):
+    client.force_login(staff_user)
+    client_record = Client.objects.create(
+        name="Campaign Shortcut Client",
+        slug="campaign-shortcut-client",
+        industry=ClientIndustry.EVENTS,
+    )
+    campaign = Campaign.objects.create(client=client_record, name="Launch Shortcut")
+
+    response = client.get(reverse("operator-campaign-detail", args=[campaign.pk]))
+
+    assert response.status_code == 200
+    assert f"?campaign={campaign.pk}".encode() in response.content
+
+
+@pytest.mark.django_db
+def test_content_calendar_shows_scheduled_posts(client, staff_user):
+    client.force_login(staff_user)
+    client_record = Client.objects.create(
+        name="Calendar Client",
+        slug="calendar-client",
+        industry=ClientIndustry.OTHER,
+    )
+    scheduled_at = datetime(2026, 6, 12, 9, 0, tzinfo=timezone.get_current_timezone())
+    Post.objects.create(
+        client=client_record,
+        title="Calendar Feature Post",
+        status=PostStatus.SCHEDULED,
+        scheduled_at=scheduled_at,
+    )
+
+    response = client.get(
+        reverse("operator-post-calendar"),
+        {"year": "2026", "month": "6", "client": str(client_record.pk)},
+    )
+
+    assert response.status_code == 200
+    assert b"Content calendar" in response.content
+    assert b"Calendar Feature Post" in response.content
 
 
 @pytest.mark.django_db

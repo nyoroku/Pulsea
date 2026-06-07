@@ -37,6 +37,7 @@ from .pinterest import (
     pinterest_is_configured,
     save_pinterest_boards,
 )
+from .presentation import platform_meta
 
 PROVIDER_GROUPS = [
     {
@@ -71,11 +72,18 @@ PROVIDER_GROUPS = [
 @staff_member_required(login_url="operator-login")
 def social_account_list(request):
     accounts = SocialAccount.objects.select_related("client")
+    account_rows = [
+        {
+            "account": account,
+            "meta": platform_meta(account.platform),
+        }
+        for account in accounts
+    ]
     return render(
         request,
         "operator/integrations/list.html",
         {
-            "accounts": accounts,
+            "account_rows": account_rows,
             "provider_groups": PROVIDER_GROUPS,
             "test_mode": settings.PUBLISHING_ADAPTER_MODE == "fake",
             "meta_configured": meta_is_configured(),

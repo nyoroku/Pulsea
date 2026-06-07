@@ -63,6 +63,8 @@ class PostComposerForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["campaign"].required = False
+        self.fields["campaign"].help_text = "Optional: attach this post to a campaign."
         self.fields["client"].queryset = Client.objects.filter(
             is_active=True,
             deleted_at__isnull=True,

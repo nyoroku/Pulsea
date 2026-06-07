@@ -135,6 +135,23 @@ def test_schedule_action_requires_time(
 
 
 @pytest.mark.django_db
+def test_composer_prefills_client_and_campaign_from_campaign_link(
+    client,
+    post_staff_user,
+    post_client_record,
+):
+    campaign = Campaign.objects.create(client=post_client_record, name="Prefilled Campaign")
+    client.force_login(post_staff_user)
+
+    response = client.get(reverse("operator-post-compose"), {"campaign": campaign.pk})
+
+    assert response.status_code == 200
+    assert b"Prefilled Campaign" in response.content
+    assert b"Post Client" in response.content
+    assert f'value="{campaign.pk}" selected'.encode() in response.content
+
+
+@pytest.mark.django_db
 def test_composer_rejects_cross_client_campaign(
     client,
     post_staff_user,
