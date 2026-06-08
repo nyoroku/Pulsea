@@ -158,6 +158,12 @@ def test_client_scoped_composer_uses_workspace_client_without_dropdown(
     post_client_record,
     post_social_account,
 ):
+    SocialAccount.objects.create(
+        client=post_client_record,
+        platform=Platform.INSTAGRAM,
+        account_name="Post Client Instagram",
+        platform_account_id="post-client-instagram",
+    )
     client.force_login(post_staff_user)
 
     get_response = client.get(
@@ -166,7 +172,13 @@ def test_client_scoped_composer_uses_workspace_client_without_dropdown(
 
     assert get_response.status_code == 200
     assert b"Build for Post Client" in get_response.content
+    assert b"platform-picker" in get_response.content
+    assert b"Facebook" in get_response.content
+    assert b"Instagram" in get_response.content
+    assert b"Post Client Page" in get_response.content
+    assert b"Post Client Instagram" in get_response.content
     assert b'<select name="client"' not in get_response.content
+    assert b'<select name="social_accounts"' not in get_response.content
 
     post_response = client.post(
         reverse("operator-client-post-compose", args=[post_client_record.slug]),

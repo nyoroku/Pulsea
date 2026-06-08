@@ -168,6 +168,7 @@ def _post_compose(request, client_record=None):
             "prefill_client": initial.get("client"),
             "prefill_campaign": initial.get("campaign"),
             "client_record": client_record,
+            "platform_picker_rows": _platform_picker_rows(form),
         },
     )
 
@@ -316,6 +317,21 @@ def _validate_publish_readiness(form: PostComposerForm) -> bool:
         return False
 
     return True
+
+
+def _platform_picker_rows(form: PostComposerForm) -> list[dict]:
+    selected_values = form["social_accounts"].value() or []
+    if isinstance(selected_values, str):
+        selected_values = [selected_values]
+    selected_ids = {str(value) for value in selected_values}
+    return [
+        {
+            "account": account,
+            "meta": platform_meta(account.platform),
+            "checked": str(account.pk) in selected_ids,
+        }
+        for account in form.fields["social_accounts"].queryset
+    ]
 
 
 def _post_row(post: Post) -> dict:

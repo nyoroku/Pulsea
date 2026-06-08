@@ -47,7 +47,34 @@
       <p class="eyebrow">Step 03</p>
       <h2>Platforms and media</h2>
       <p class="muted">Pick connected accounts for this client, then add media if the selected platform needs it.</p>
-      {{ form.social_accounts.as_field_group }}
+      <div class="platform-picker-field">
+        <label>Publishing platforms</label>
+        {% if form.social_accounts.errors %}{{ form.social_accounts.errors }}{% endif %}
+        {% if platform_picker_rows %}
+          <div class="platform-picker">
+            {% for row in platform_picker_rows %}
+              <label class="platform-option">
+                <input type="checkbox" name="social_accounts" value="{{ row.account.pk }}" {% if row.checked %}checked{% endif %}>
+                <span class="platform-option-icon {{ row.meta.class }}">{{ row.meta.icon }}</span>
+                <span class="platform-option-copy">
+                  <strong>{{ row.meta.label }}</strong>
+                  <small>{{ row.account.account_name }}</small>
+                </span>
+                <span class="platform-option-status">{{ row.account.get_connection_health_display }}</span>
+              </label>
+            {% endfor %}
+          </div>
+          <p class="helptext">{{ form.social_accounts.help_text }}</p>
+        {% else %}
+          <div class="empty-state compact">
+            <h2>No connected platforms</h2>
+            <p>Connect a platform for this workspace before publishing.</p>
+            {% if client_record %}
+              <a class="button-secondary" href="{% url 'operator-client-social-account-list' slug=client_record.slug %}">Connect platforms</a>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
       {{ form.existing_media.as_field_group }}
       {{ form.media_uploads.as_field_group }}
       <div class="notice">
